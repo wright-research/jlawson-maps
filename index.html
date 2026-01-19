@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map Templates</title>
+
+    <!-- Mapbox GL JS CSS -->
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link href="css/styles.css" rel="stylesheet">
+</head>
+<body>
+    <!-- List View -->
+    <div id="list-view">
+        <header>
+            <h1>Saved Maps</h1>
+            <button id="btn-new-map" class="btn-primary">+ New Map</button>
+        </header>
+        <div id="maps-list" class="maps-grid">
+            <!-- Populated dynamically by app.js -->
+        </div>
+        <div id="loading-list" class="loading hidden">
+            <p>Loading maps...</p>
+        </div>
+        <div id="empty-state" class="empty-state hidden">
+            <p>No maps yet. Create your first map!</p>
+        </div>
+    </div>
+
+    <!-- Editor View -->
+    <div id="editor-view" class="hidden">
+        <header>
+            <button id="btn-back" class="btn-secondary">← Back</button>
+            <input type="text" id="map-name" placeholder="Map name..." maxlength="100">
+            <div class="header-actions">
+                <button id="btn-save" class="btn-primary">Save</button>
+                <button id="btn-save-as" class="btn-secondary">Save As</button>
+            </div>
+        </header>
+        <div id="map-container"></div>
+        <div id="loading-editor" class="loading hidden">
+            <p>Loading map...</p>
+        </div>
+    </div>
+
+    <!-- Mapbox GL JS -->
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js"></script>
+
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.js"></script>
+
+    <!-- Application Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

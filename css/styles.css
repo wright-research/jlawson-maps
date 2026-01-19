@@ -1,0 +1,244 @@
+/* Global Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    color: #333;
+    background-color: #f5f5f5;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Button Styles */
+button {
+    font-family: inherit;
+    font-size: 14px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.btn-primary {
+    background-color: #2563eb;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #1d4ed8;
+}
+
+.btn-primary:active {
+    background-color: #1e40af;
+}
+
+.btn-secondary {
+    background-color: #6b7280;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #4b5563;
+}
+
+.btn-secondary:active {
+    background-color: #374151;
+}
+
+.btn-danger {
+    background-color: #dc2626;
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #b91c1c;
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* List View Styles */
+#list-view {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+#list-view header {
+    background-color: white;
+    padding: 20px 30px;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#list-view h1 {
+    font-size: 24px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.maps-grid {
+    flex: 1;
+    overflow-y: auto;
+    padding: 30px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    align-content: start;
+}
+
+.map-card {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.map-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.map-card h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 8px;
+    word-break: break-word;
+}
+
+.map-card-meta {
+    font-size: 13px;
+    color: #6b7280;
+    margin-bottom: 15px;
+}
+
+.map-card-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.map-card-actions button {
+    flex: 1;
+    padding: 8px 16px;
+    font-size: 13px;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #6b7280;
+}
+
+.empty-state p {
+    font-size: 16px;
+}
+
+/* Loading State */
+.loading {
+    text-align: center;
+    padding: 60px 20px;
+    color: #6b7280;
+}
+
+/* Editor View Styles */
+#editor-view {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+#editor-view header {
+    background-color: white;
+    padding: 15px 20px;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-shrink: 0;
+}
+
+#map-name {
+    flex: 1;
+    font-family: inherit;
+    font-size: 16px;
+    padding: 10px 15px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    outline: none;
+}
+
+#map-name:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+#map-container {
+    flex: 1;
+    position: relative;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .maps-grid {
+        grid-template-columns: 1fr;
+        padding: 20px;
+    }
+
+    #list-view header {
+        padding: 15px 20px;
+    }
+
+    #list-view h1 {
+        font-size: 20px;
+    }
+
+    #editor-view header {
+        flex-wrap: wrap;
+    }
+
+    #map-name {
+        order: -1;
+        width: 100%;
+    }
+
+    .header-actions {
+        margin-left: auto;
+    }
+}
+
+/* Loading animation */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.loading p {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

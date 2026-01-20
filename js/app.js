@@ -4,6 +4,7 @@
 let currentView = 'list'; // 'list' or 'editor'
 let currentMapId = null;  // null for new map, UUID for existing
 let map = null;           // Mapbox GL JS instance
+let lastSavedState = null; // Last saved map state for tracking changes
 
 // DOM elements
 const listView = document.getElementById('list-view');
@@ -69,11 +70,6 @@ async function initializeApp() {
     // Add county controls event listeners
     toggleCounties.addEventListener('change', handleCountyToggle);
     countySelect.addEventListener('change', handleCountySelection);
-
-    // Add basemap controls event listeners
-    document.querySelectorAll('input[name="basemap"]').forEach(radio => {
-        radio.addEventListener('change', handleBasemapChange);
-    });
 
     // Add search functionality
     mapSearch.addEventListener('input', handleSearch);
@@ -168,22 +164,13 @@ function getSelectedCounties() {
 }
 
 /**
- * Handle basemap change
- */
-async function handleBasemapChange(event) {
-    if (!map) return;
-
-    const basemapType = event.target.value;
-    await switchBasemap(map, basemapType);
-}
-
-/**
  * Show the list view and load all maps
  * @param {boolean} updateHistory - Whether to update browser history (default: true)
  */
 async function showListView(updateHistory = true) {
     currentView = 'list';
     currentMapId = null;
+    lastSavedState = null;
 
     // Clean up map instance if it exists
     if (map) {
@@ -279,13 +266,6 @@ function setupMapControls() {
         toggleCounties.checked = false;
         countySelectContainer.classList.add('hidden');
         countySelect.selectedIndex = -1;
-    }
-
-    // Setup basemap controls
-    const basemap = map.userData.basemap || 'street';
-    const basemapRadio = document.querySelector(`input[name="basemap"][value="${basemap}"]`);
-    if (basemapRadio) {
-        basemapRadio.checked = true;
     }
 }
 
@@ -457,6 +437,9 @@ async function loadExistingMap(mapId) {
 
             // Setup UI controls
             setupMapControls();
+
+            // Store the relevant saved state for comparison later (only pins and counties)
+            lastSavedState = JSON.stringify(getRelevantMapState(map));
 
             loadingEditor.classList.add('hidden');
         });
@@ -646,6 +629,9 @@ async function handleSave() {
             updateUrl(currentMapId);
         }
 
+        // Update last saved state (only relevant parts: pins and counties)
+        lastSavedState = JSON.stringify(getRelevantMapState(map));
+
         btnSave.textContent = 'Saved!';
         setTimeout(() => {
             btnSave.textContent = 'Save';
@@ -722,6 +708,9 @@ async function handleSaveAs() {
         // Update URL to reflect the new map
         updateUrl(currentMapId);
 
+        // Update last saved state (only relevant parts: pins and counties)
+        lastSavedState = JSON.stringify(getRelevantMapState(map));
+
         btnSaveAs.textContent = 'Saved!';
         setTimeout(() => {
             btnSaveAs.textContent = 'Save As';
@@ -760,11 +749,8 @@ async function handleExportImage() {
 
         // Hide map controls during export
         const mapControls = document.getElementById('map-controls');
-        const basemapControls = document.getElementById('basemap-controls');
         const originalMapControlsDisplay = mapControls.style.display;
-        const originalBasemapControlsDisplay = basemapControls.style.display;
         mapControls.style.display = 'none';
-        basemapControls.style.display = 'none';
 
         // Wait for map to settle
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -780,7 +766,6 @@ async function handleExportImage() {
 
         // Restore controls
         mapControls.style.display = originalMapControlsDisplay;
-        basemapControls.style.display = originalBasemapControlsDisplay;
 
         // Convert canvas to data URL (PNG format)
         const dataURL = canvas.toDataURL('image/png');
@@ -830,23 +815,44 @@ async function handleExportImage() {
 }
 
 /**
+ * Get only the relevant parts of map state for change tracking
+ * (pins and county boundaries, not map position)
+ */
+function getRelevantMapState(map) {
+    if (!map || !map.userData) return null;
+
+    return {
+        pins: map.userData.pins || [],
+        countyBoundaries: map.userData.countyBoundaries || { enabled: false, selectedCounties: [] }
+    };
+}
+
+/**
  * Handle returning to the list view
  */
 async function handleBackToList() {
     if (map) {
-        // Check if there are unsaved changes
-        const result = await Swal.fire({
-            title: 'Unsaved Changes',
-            text: 'Any unsaved changes will be lost. Are you sure you want to go back?',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Yes, go back',
-            cancelButtonText: 'Stay here',
-            confirmButtonColor: '#dc2626',
-            cancelButtonColor: '#6b7280'
-        });
+        // Check if there are unsaved changes by comparing only pins and county boundaries
+        const currentRelevantState = JSON.stringify(getRelevantMapState(map));
+        const hasUnsavedChanges = currentRelevantState !== lastSavedState;
 
-        if (result.isConfirmed) {
+        if (hasUnsavedChanges) {
+            const result = await Swal.fire({
+                title: 'Unsaved Changes',
+                text: 'Any unsaved changes will be lost. Are you sure you want to go back?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, go back',
+                cancelButtonText: 'Stay here',
+                confirmButtonColor: '#dc2626',
+                cancelButtonColor: '#6b7280'
+            });
+
+            if (result.isConfirmed) {
+                showListView();
+            }
+        } else {
+            // No unsaved changes, go back directly
             showListView();
         }
     } else {

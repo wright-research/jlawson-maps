@@ -6,58 +6,11 @@ const DEFAULT_MAP_STATE = {
     zoom: 10,
     bearing: 0,
     pitch: 0,
-    basemap: 'street', // 'street', 'gray', or 'satellite'
+    style: 'mapbox://styles/mapbox/streets-v12',
     pins: [],
     countyBoundaries: {
         enabled: false,
         selectedCounties: []
-    }
-};
-
-// Basemap configurations
-const BASEMAP_CONFIGS = {
-    street: {
-        style: 'mapbox://styles/mapbox/streets-v12'
-    },
-    gray: {
-        style: {
-            version: 8,
-            sources: {
-                'carto-light': {
-                    type: 'raster',
-                    tiles: ['https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png'],
-                    tileSize: 256,
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-                }
-            },
-            layers: [{
-                id: 'carto-light-layer',
-                type: 'raster',
-                source: 'carto-light',
-                minzoom: 0,
-                maxzoom: 22
-            }]
-        }
-    },
-    satellite: {
-        style: {
-            version: 8,
-            sources: {
-                'google-satellite': {
-                    type: 'raster',
-                    tiles: ['http://mt0.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}'],
-                    tileSize: 256,
-                    attribution: 'Map data ©2023 Google'
-                }
-            },
-            layers: [{
-                id: 'google-satellite-layer',
-                type: 'raster',
-                source: 'google-satellite',
-                minzoom: 0,
-                maxzoom: 22
-            }]
-        }
     }
 };
 
@@ -78,14 +31,10 @@ function initializeMap(containerId, mapState = null) {
     // Set Mapbox access token
     mapboxgl.accessToken = CONFIG.MAPBOX_TOKEN;
 
-    // Get the appropriate style for the basemap
-    const basemapConfig = BASEMAP_CONFIGS[state.basemap || 'street'];
-    const style = basemapConfig.style;
-
     // Create and return the map
     const map = new mapboxgl.Map({
         container: containerId,
-        style: style,
+        style: state.style || 'mapbox://styles/mapbox/streets-v12',
         center: state.center,
         zoom: state.zoom,
         bearing: state.bearing,
@@ -102,8 +51,7 @@ function initializeMap(containerId, mapState = null) {
     // Initialize map data storage
     map.userData = {
         pins: state.pins || [],
-        countyBoundaries: state.countyBoundaries || DEFAULT_MAP_STATE.countyBoundaries,
-        basemap: state.basemap || 'street'
+        countyBoundaries: state.countyBoundaries || DEFAULT_MAP_STATE.countyBoundaries
     };
 
     return map;
@@ -120,7 +68,7 @@ function getMapState(map) {
         zoom: map.getZoom(),
         bearing: map.getBearing(),
         pitch: map.getPitch(),
-        basemap: map.userData?.basemap || 'street',
+        style: 'mapbox://styles/mapbox/streets-v12',
         pins: map.userData?.pins || [],
         countyBoundaries: map.userData?.countyBoundaries || DEFAULT_MAP_STATE.countyBoundaries
     };
@@ -431,17 +379,13 @@ async function updateCountyBoundaries(map, enabled, selectedCounties) {
                 });
             }
 
-            // Choose border color based on basemap type
-            const basemap = map.userData?.basemap || 'street';
-            const borderColor = basemap === 'satellite' ? '#ffffff' : '#000000';
-
-            // Add outline layer (no fill, just border)
+            // Add outline layer (no fill, just black border)
             map.addLayer({
                 id: 'county-boundaries-line',
                 type: 'line',
                 source: 'counties',
                 paint: {
-                    'line-color': borderColor,
+                    'line-color': '#000000',
                     'line-width': 2
                 }
             });
@@ -464,65 +408,4 @@ async function restoreCountyBoundaries(map, countyBoundaries) {
         countyBoundaries.enabled,
         countyBoundaries.selectedCounties
     );
-}
-
-/**
- * Switch the map basemap
- * @param {mapboxgl.Map} map - The map instance
- * @param {string} basemapType - The basemap type ('street', 'gray', or 'satellite')
- */
-async function switchBasemap(map, basemapType) {
-    if (!map || !BASEMAP_CONFIGS[basemapType]) return;
-
-    // Store current map state before switching
-    const currentCenter = map.getCenter();
-    const currentZoom = map.getZoom();
-    const currentBearing = map.getBearing();
-    const currentPitch = map.getPitch();
-
-    // Make a deep copy of county boundaries state to preserve it
-    const currentCounties = {
-        enabled: map.userData?.countyBoundaries?.enabled || false,
-        selectedCounties: [...(map.userData?.countyBoundaries?.selectedCounties || [])]
-    };
-
-    // Update basemap in user data BEFORE style change
-    map.userData.basemap = basemapType;
-    map.userData.countyBoundaries = currentCounties;
-
-    // Get the new style
-    const basemapConfig = BASEMAP_CONFIGS[basemapType];
-    const newStyle = basemapConfig.style;
-
-    // Return a promise that resolves when basemap is fully switched
-    return new Promise((resolve) => {
-        // Set the new style
-        map.setStyle(newStyle);
-
-        // Wait for both style.load AND idle to ensure map is fully ready
-        const onStyleLoaded = async () => {
-            // Restore map position
-            map.jumpTo({
-                center: currentCenter,
-                zoom: currentZoom,
-                bearing: currentBearing,
-                pitch: currentPitch
-            });
-
-            // Ensure basemap and county boundaries are still set in userData after style change
-            map.userData.basemap = basemapType;
-            map.userData.countyBoundaries = currentCounties;
-
-            // Wait for map to be idle before adding layers
-            map.once('idle', async () => {
-                // Restore county boundaries if they were enabled
-                if (currentCounties.enabled && currentCounties.selectedCounties.length > 0) {
-                    await updateCountyBoundaries(map, currentCounties.enabled, currentCounties.selectedCounties);
-                }
-                resolve();
-            });
-        };
-
-        map.once('style.load', onStyleLoaded);
-    });
 }

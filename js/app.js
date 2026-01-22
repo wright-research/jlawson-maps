@@ -468,6 +468,8 @@ async function handleCreateNew() {
         showCancelButton: true,
         confirmButtonColor: '#2563eb',
         cancelButtonColor: '#6b7280',
+        backdrop: true,
+        allowOutsideClick: true,
         inputValidator: (value) => {
             if (!value || !value.trim()) {
                 return 'Please enter a map name';

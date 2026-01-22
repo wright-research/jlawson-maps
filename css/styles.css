@@ -276,17 +276,92 @@ button:disabled {
         font-size: 20px;
     }
 
+    #list-view h1 .title-line-1,
+    #list-view h1 .title-line-2 {
+        display: block;
+    }
+
+    /* Make "+ New Map" button just show "+" as a square button */
+    #btn-new-map {
+        width: 44px;
+        height: 44px;
+        padding-bottom: 15px;
+        font-size: 0;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    #btn-new-map::before {
+        content: '+';
+        font-size: 28px;
+        font-weight: 600;
+        line-height: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
     #editor-view header {
         flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
     }
 
     #map-name {
         order: -1;
         width: 100%;
+        flex-basis: 100%;
+        margin-bottom: 5px;
+    }
+
+    #btn-back {
+        order: 0;
+        flex: 1 1 45%;
+        max-width: 45%;
     }
 
     .header-actions {
-        margin-left: auto;
+        order: 1;
+        flex: 1 1 45%;
+        max-width: 45%;
+        margin-left: 0;
+        gap: 0;
+    }
+
+    #btn-save {
+        flex: 1;
+        width: 100%;
+    }
+
+    /* Hide Export Image and Save As buttons on mobile */
+    #btn-export-image,
+    #btn-save-as {
+        display: none;
+    }
+
+    /* Lower the map controls panel on mobile and make more compact */
+    #map-controls {
+        top: 140px !important;
+        max-width: 200px;
+        padding: 8px;
+    }
+
+    /* Make county select smaller on mobile - show fewer counties */
+    #county-select {
+        font-size: 12px;
+        height: 140px;
+        max-height: 140px;
+    }
+
+    /* Hide Mapbox zoom, fullscreen, and compass settings on mobile */
+    .mapboxgl-ctrl-zoom-in,
+    .mapboxgl-ctrl-zoom-out,
+    .mapboxgl-ctrl-fullscreen,
+    .mapboxgl-ctrl-compass {
+        display: none !important;
     }
 }
 

@@ -8,13 +8,13 @@ const supabase = window.supabase.createClient(
 
 /**
  * Get all saved maps from the database
- * @returns {Promise<Array>} Array of map objects with id, name, created_at, updated_at
+ * @returns {Promise<Array>} Array of map objects with id, name, note, created_at, updated_at
  */
 async function getAllMaps() {
     try {
         const { data, error } = await supabase
             .from('maps')
-            .select('id, name, created_at, updated_at')
+            .select('id, name, note, created_at, updated_at')
             .order('updated_at', { ascending: false });
 
         if (error) throw error;
@@ -96,6 +96,31 @@ async function updateMap(id, name, mapState) {
         return data;
     } catch (error) {
         console.error('Error updating map:', error);
+        throw error;
+    }
+}
+
+/**
+ * Update just the note for a map
+ * @param {string} id - UUID of the map to update
+ * @param {string} note - Updated note text
+ * @returns {Promise<Object>} Updated map object
+ */
+async function updateMapNote(id, note) {
+    try {
+        const { data, error } = await supabase
+            .from('maps')
+            .update({
+                note: note
+            })
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    } catch (error) {
+        console.error('Error updating map note:', error);
         throw error;
     }
 }

@@ -11,6 +11,12 @@
     <!-- Mapbox GL JS CSS -->
     <link href="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css" rel="stylesheet">
 
+    <!-- Mapbox Geocoder CSS -->
+    <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css" type="text/css">
+
+    <!-- Web Awesome CSS Theme -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@awesome.me/webawesome@latest/dist-cdn/styles/themes/default.css">
+
     <!-- Custom CSS -->
     <link href="css/styles.css" rel="stylesheet">
 </head>
@@ -19,10 +25,10 @@
     <div id="list-view">
         <header>
             <h1><span class="title-line-1">J. Lawson & Associates</span> <span class="title-line-2">Appraisal Maps</span></h1>
+            <input type="text" id="map-search" placeholder="Search saved maps...">
             <button id="btn-new-map" class="btn-primary">+ New Map</button>
         </header>
         <div class="search-container">
-            <input type="text" id="map-search" placeholder="Search maps...">
         </div>
         <div id="maps-list" class="maps-grid">
             <!-- Populated dynamically by app.js -->
@@ -40,28 +46,40 @@
         <header>
             <button id="btn-back" class="btn-secondary">← Back</button>
             <input type="text" id="map-name" placeholder="Map name..." maxlength="100">
+            <div id="geocoder-container"></div>
             <div class="header-actions">
                 <button id="btn-export-image" class="btn-secondary">Export Image</button>
                 <button id="btn-save" class="btn-primary">Save</button>
-                <button id="btn-save-as" class="btn-secondary">Save As</button>
             </div>
         </header>
 
         <!-- Map Controls Panel -->
         <div id="map-controls">
-            <div class="control-group">
-                <label class="control-label">
-                    <input type="checkbox" id="toggle-counties">
-                    Show County Boundaries
-                </label>
+            <div class="control-group" id="toggle-counties-container">
+                <wa-switch id="toggle-counties">Show County Boundaries</wa-switch>
             </div>
             <div class="control-group county-select-container hidden" id="county-select-container">
                 <label class="control-label-text">Select Counties:</label>
-                <select id="county-select" multiple size="8">
+                <select id="county-select" multiple size="6">
                     <!-- Populated dynamically -->
                 </select>
                 <div class="county-help-text">CTRL + click to select multiple counties</div>
             </div>
+        </div>
+
+        <!-- Comp Type Controls Panel -->
+        <div id="comp-type-controls">
+            <wa-radio-group
+                id="comp-type-radio-group"
+                label="Choose comp type:"
+                orientation="vertical"
+                name="comp-type"
+                value="sales"
+            >
+                <wa-radio appearance="button" value="sales">Sales</wa-radio>
+                <wa-radio appearance="button" value="rent">Rent</wa-radio>
+                <wa-radio appearance="button" value="land">Land</wa-radio>
+            </wa-radio-group>
         </div>
 
         <div id="map-container"></div>
@@ -70,8 +88,107 @@
         </div>
     </div>
 
+    <!-- Dialogs -->
+    <wa-dialog label="Create New Map" id="dialog-create-map">
+        <div style="margin-bottom: 15px;">
+            <label for="new-map-name-input" style="display: block; margin-bottom: 5px; font-weight: 500;">Enter a name for your map</label>
+            <input type="text" id="new-map-name-input" placeholder="My Map" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-family: inherit; font-size: 14px;">
+        </div>
+        <div slot="footer" style="display: flex; gap: 10px; justify-content: flex-end;">
+            <wa-button data-dialog="close">Cancel</wa-button>
+            <wa-button variant="brand" id="confirm-create-map">Create</wa-button>
+        </div>
+    </wa-dialog>
+
+    <wa-dialog label="Map Saved!" id="dialog-map-saved">
+        Your map has been saved successfully.
+        <wa-button slot="footer" variant="brand" data-dialog="close">OK</wa-button>
+    </wa-dialog>
+
+    <wa-dialog label="Exported!" id="dialog-export-success">
+        <span id="export-success-message"></span>
+        <wa-button slot="footer" variant="brand" data-dialog="close">OK</wa-button>
+    </wa-dialog>
+
+    <wa-dialog label="Unsaved Changes" id="dialog-unsaved-changes">
+        Any unsaved changes will be lost. Are you sure you want to go back?
+        <div slot="footer" style="display: flex; gap: 10px; justify-content: flex-end;">
+            <wa-button data-dialog="close">Stay here</wa-button>
+            <wa-button variant="danger" id="confirm-discard-changes">Yes, go back</wa-button>
+        </div>
+    </wa-dialog>
+
+    <wa-dialog label="Renumber Pin" id="dialog-edit-pin">
+        <div style="display: flex; flex-direction: column; gap: 15px;">
+            <div>
+                <label for="pin-renumber-input" style="display: block; margin-bottom: 5px; font-weight: 500;">Enter new number</label>
+                <input type="number" id="pin-renumber-input" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-family: inherit; font-size: 14px;">
+            </div>
+        </div>
+        <div slot="footer" style="display: flex; gap: 10px; justify-content: flex-end;">
+            <wa-button data-dialog="close">Cancel</wa-button>
+            <wa-button variant="brand" id="confirm-renumber-pin">Save</wa-button>
+            <wa-button variant="danger" id="confirm-delete-pin">Delete</wa-button>
+        </div>
+    </wa-dialog>
+
+    <wa-dialog label="Copy Map" id="dialog-copy-map">
+        <div style="margin-bottom: 15px;">
+            <label for="copy-map-name-input" style="display: block; margin-bottom: 5px; font-weight: 500;">Enter a name for the new map</label>
+            <input type="text" id="copy-map-name-input" placeholder="My Map (Copy)" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-family: inherit; font-size: 14px;">
+        </div>
+        <div slot="footer" style="display: flex; gap: 10px; justify-content: flex-end;">
+            <wa-button data-dialog="close">Cancel</wa-button>
+            <wa-button variant="brand" id="confirm-copy-map">Copy</wa-button>
+        </div>
+    </wa-dialog>
+
+    <wa-dialog label="Delete Map?" id="dialog-delete-map">
+        <span id="delete-map-message"></span>
+        <div slot="footer" style="display: flex; gap: 10px; justify-content: flex-end;">
+            <wa-button data-dialog="close">Cancel</wa-button>
+            <wa-button variant="danger" id="confirm-delete-map">Yes, delete it</wa-button>
+        </div>
+    </wa-dialog>
+
+    <wa-dialog label="Error" id="dialog-error">
+        <span id="error-message"></span>
+        <wa-button slot="footer" variant="brand" data-dialog="close">OK</wa-button>
+    </wa-dialog>
+
+    <wa-dialog label="Warning" id="dialog-warning">
+        <span id="warning-message"></span>
+        <wa-button slot="footer" variant="brand" data-dialog="close">OK</wa-button>
+    </wa-dialog>
+
+    <wa-dialog label="Success" id="dialog-success">
+        <span id="success-message"></span>
+        <wa-button slot="footer" variant="brand" data-dialog="close">OK</wa-button>
+    </wa-dialog>
+
+    <wa-dialog label="Add Note" id="dialog-add-note">
+        <wa-textarea id="note-textarea" label="Note" hint="You can search for this text later." rows="6"></wa-textarea>
+        <div slot="footer" style="display: flex; gap: 10px; justify-content: flex-end;">
+            <wa-button data-dialog="close">Cancel</wa-button>
+            <wa-button variant="brand" id="confirm-save-note">Save Note</wa-button>
+        </div>
+    </wa-dialog>
+
     <!-- Mapbox GL JS -->
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js"></script>
+
+    <!-- Mapbox Geocoder JS -->
+    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
+
+    <!-- Web Awesome JS - Import Specific Components -->
+    <script type="module">
+        import 'https://cdn.jsdelivr.net/npm/@awesome.me/webawesome@latest/dist-cdn/components/switch/switch.js';
+        import 'https://cdn.jsdelivr.net/npm/@awesome.me/webawesome@latest/dist-cdn/components/radio-group/radio-group.js';
+        import 'https://cdn.jsdelivr.net/npm/@awesome.me/webawesome@latest/dist-cdn/components/radio/radio.js';
+        import 'https://cdn.jsdelivr.net/npm/@awesome.me/webawesome@latest/dist-cdn/components/dialog/dialog.js';
+        import 'https://cdn.jsdelivr.net/npm/@awesome.me/webawesome@latest/dist-cdn/components/button/button.js';
+        import 'https://cdn.jsdelivr.net/npm/@awesome.me/webawesome@latest/dist-cdn/components/textarea/textarea.js';
+    </script>
 
     <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.js"></script>

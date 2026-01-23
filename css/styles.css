@@ -30,16 +30,16 @@ button {
 }
 
 .btn-primary {
-    background-color: #2563eb;
+    background-color: #377eb8;
     color: white;
 }
 
 .btn-primary:hover {
-    background-color: #1d4ed8;
+    background-color: #2a6596;
 }
 
 .btn-primary:active {
-    background-color: #1e40af;
+    background-color: #1e4a6e;
 }
 
 .btn-secondary {
@@ -56,12 +56,12 @@ button {
 }
 
 .btn-danger {
-    background-color: #dc2626;
+    background-color: #e41a1c;
     color: white;
 }
 
 .btn-danger:hover {
-    background-color: #b91c1c;
+    background-color: #c21618;
 }
 
 button:disabled {
@@ -83,6 +83,7 @@ button:disabled {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 15px;
 }
 
 #list-view h1 {
@@ -92,19 +93,19 @@ button:disabled {
 }
 
 .search-container {
-    padding: 15px 30px;
-    background-color: white;
-    border-bottom: 1px solid #e5e7eb;
+    display: none;
 }
 
 #map-search {
-    width: 100%;
+    width: 350px;
+    max-width: 350px;
     font-family: inherit;
     font-size: 14px;
     padding: 10px 15px;
     border: 1px solid #d1d5db;
     border-radius: 6px;
     outline: none;
+    margin-left: auto;
 }
 
 #map-search:focus {
@@ -152,14 +153,14 @@ button:disabled {
 }
 
 .map-card-actions {
-    display: flex;
-    gap: 10px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
 }
 
 .map-card-actions button {
-    flex: 1;
-    padding: 10px;
-    font-size: 13px;
+    padding: 8px;
+    font-size: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -167,8 +168,8 @@ button:disabled {
 }
 
 .map-card-actions button svg {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
 }
 
 .map-card-actions button .tooltip {
@@ -190,6 +191,10 @@ button:disabled {
 
 .map-card-actions button:hover .tooltip {
     opacity: 1;
+}
+
+.map-card-actions button:hover {
+    transform: translateY(-1px);
 }
 
 /* Empty State */
@@ -280,6 +285,53 @@ button:disabled {
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
+#geocoder-container {
+    flex: 1;
+}
+
+/* Customize Mapbox Geocoder styling to match our design */
+#geocoder-container .mapboxgl-ctrl-geocoder {
+    width: 100%;
+    max-width: none;
+    box-shadow: none;
+    font-family: inherit;
+}
+
+/* add top margin to the <svg> element with class mapboxgl-ctrl-geocoder--icon */
+#geocoder-container .mapboxgl-ctrl-geocoder--icon {
+    margin-top: 3px;
+}
+
+#geocoder-container .mapboxgl-ctrl-geocoder input[type='text'] {
+    font-family: inherit;
+    font-size: 16px;
+    padding: 10px 15px 10px 40px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    outline: none;
+    height: auto;
+}
+
+#geocoder-container .mapboxgl-ctrl-geocoder input[type='text']:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    outline: none;
+}
+
+#geocoder-container .mapboxgl-ctrl-geocoder--icon-search {
+    fill: #6b7280;
+}
+
+#geocoder-container .suggestions {
+    font-family: inherit;
+    font-size: 14px;
+}
+
+/* Hide Mapbox navigation controls (zoom, compass, fullscreen) */
+.mapboxgl-ctrl-top-right {
+    display: none !important;
+}
+
 .header-actions {
     display: flex;
     gap: 10px;
@@ -302,15 +354,26 @@ button:disabled {
 
     #list-view header {
         padding: 15px 20px;
+        flex-wrap: wrap;
     }
 
     #list-view h1 {
-        font-size: 20px;
+        font-size: 24px;
+        flex-basis: 100%;
+        margin-bottom: 10px;
     }
 
     #list-view h1 .title-line-1,
     #list-view h1 .title-line-2 {
         display: block;
+    }
+
+    #map-search {
+        flex: 1;
+        width: auto;
+        max-width: none;
+        min-width: 0;
+        margin-left: 0;
     }
 
     /* Make "+ New Map" button just show "+" as a square button */
@@ -374,11 +437,53 @@ button:disabled {
         display: none;
     }
 
-    /* Lower the map controls panel on mobile and make more compact */
+    /* Hide geocoder on mobile */
+    #geocoder-container {
+        display: none;
+    }
+
+    /* Hide county boundaries checkbox on mobile */
+    #toggle-counties {
+        display: none;
+    }
+
+    /* Hide the map controls when in mobile */
     #map-controls {
-        top: 140px !important;
-        max-width: 200px;
-        padding: 8px;
+        display: none;
+    }
+
+    /* Reposition comp type controls to bottom on mobile */
+    #comp-type-controls {
+        top: auto !important;
+        bottom: 20px !important;
+        left: 50% !important;
+        right: auto !important;
+        transform: translateX(-50%) !important;
+        min-width: auto;
+        padding: 8px 12px;
+        max-width: 90%;
+    }
+
+    /* Make radio group horizontal on mobile */
+    #comp-type-controls wa-radio-group {
+        width: auto;
+    }
+
+    #comp-type-controls wa-radio-group::part(label) {
+        font-size: 10px !important;
+        margin-bottom: 4px !important;
+        text-align: center;
+    }
+
+    #comp-type-controls wa-radio-group::part(form-control) {
+        gap: 6px !important;
+        flex-direction: row !important;
+    }
+
+    #comp-type-controls wa-radio {
+        font-size: 11px !important;
+        border: 0.7px solid #377eb8;
+        padding: 4px 10px !important;
     }
 
     /* Make county select smaller on mobile - show fewer counties */
@@ -424,12 +529,83 @@ button:disabled {
     max-width: 250px;
 }
 
-.control-group {
-    margin-bottom: 15px;
+/* Comp Type Controls Panel */
+#comp-type-controls {
+    position: absolute;
+    top: 85px;
+    right: 10px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    padding: 15px;
+    z-index: 10;
+    min-width: 180px;
+}
+
+/* Web Awesome Radio Group Styling */
+#comp-type-controls wa-radio-group {
+    width: 100%;
+}
+
+#comp-type-controls wa-radio-group::part(label) {
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 8px;
+}
+
+/* make the wa-switch label text larger */
+#map-controls wa-switch::part(label) {
+    font-size: 15px !important;
+    font-weight: 500;
+}
+
+#comp-type-controls wa-radio-group::part(form-control) {
+    gap: 22px;
+}
+
+/* for each wa-radio, set border to 5px solid red */
+#comp-type-controls wa-radio {
+    border: 0.7px solid #377eb8;
+    /* padding-left: 10px; */
+}
+
+#comp-type-controls wa-radio {
+    font-size: 16px;
+    text-align: center;
+    justify-content: center;
+}
+
+/* Web Awesome Switch Styling */
+#map-controls wa-switch {
+    font-size: 13px;
+    font-weight: 500;
+    display: block;
+}
+
+#map-controls wa-switch::part(base) {
+    cursor: pointer;
+}
+
+#map-controls wa-switch::part(label) {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+/* Prevent FOUCE (Flash of Undefined Custom Elements) */
+wa-switch:not(:defined),
+wa-radio-group:not(:defined),
+wa-radio:not(:defined) {
+    opacity: 0;
 }
 
 .control-group:last-child {
     margin-bottom: 0;
+}
+
+/* Add margin to toggle container only when switch is on */
+#toggle-counties-container.switch-on {
+    margin-bottom: 15px;
 }
 
 .control-label {
@@ -507,7 +683,7 @@ button:disabled {
 .map-pin {
     width: 36px;
     height: 36px;
-    background-color: #dc2626;
+    /* background-color set dynamically in JavaScript based on comp type */
     border: 3px solid white;
     border-radius: 50% 50% 50% 0;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
@@ -516,7 +692,6 @@ button:disabled {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: transform 0.2s ease;
 }
 
 .map-pin:hover {
@@ -539,4 +714,53 @@ button:disabled {
 
 .swal2-popup {
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Web Awesome Dialog Button Styling */
+/* Style Cancel buttons to be dark gray/black */
+wa-dialog wa-button:not([variant])::part(base) {
+    background-color: #374151;
+    border-color: #374151;
+    color: white;
+}
+
+wa-dialog wa-button:not([variant])::part(base):hover {
+    background-color: #1f2937;
+    border-color: #1f2937;
+}
+
+/* Override brand variant to match our blue buttons */
+#dialog-edit-pin wa-button[variant="brand"]::part(base),
+#dialog-map-saved wa-button[variant="brand"]::part(base),
+#dialog-export-success wa-button[variant="brand"]::part(base),
+#dialog-success wa-button[variant="brand"]::part(base),
+#dialog-error wa-button[variant="brand"]::part(base),
+#dialog-warning wa-button[variant="brand"]::part(base) {
+    background-color: #377eb8;
+    border-color: #377eb8;
+}
+
+#dialog-edit-pin wa-button[variant="brand"]::part(base):hover,
+#dialog-map-saved wa-button[variant="brand"]::part(base):hover,
+#dialog-export-success wa-button[variant="brand"]::part(base):hover,
+#dialog-success wa-button[variant="brand"]::part(base):hover,
+#dialog-error wa-button[variant="brand"]::part(base):hover,
+#dialog-warning wa-button[variant="brand"]::part(base):hover {
+    background-color: #2a6596;
+    border-color: #2a6596;
+}
+
+/* Override danger variant to match our red buttons */
+#dialog-edit-pin wa-button[variant="danger"]::part(base),
+#dialog-unsaved-changes wa-button[variant="danger"]::part(base),
+#dialog-delete-map wa-button[variant="danger"]::part(base) {
+    background-color: #e41a1c;
+    border-color: #e41a1c;
+}
+
+#dialog-edit-pin wa-button[variant="danger"]::part(base):hover,
+#dialog-unsaved-changes wa-button[variant="danger"]::part(base):hover,
+#dialog-delete-map wa-button[variant="danger"]::part(base):hover {
+    background-color: #c21618;
+    border-color: #c21618;
 }

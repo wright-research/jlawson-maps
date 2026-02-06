@@ -69,6 +69,15 @@ button:disabled {
     cursor: not-allowed;
 }
 
+#btn-save.btn-saved {
+    background-color: #9ca3af;
+    cursor: default;
+}
+
+#btn-save.btn-saved:hover {
+    background-color: #9ca3af;
+}
+
 /* List View Styles */
 #list-view {
     height: 100vh;
@@ -681,21 +690,32 @@ wa-radio:not(:defined) {
 
 /* Pin Markers */
 .map-pin {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3));
+}
+
+.map-pin:hover {
+    transform: scale(1.1);
+}
+
+.map-pin .pin-head {
     width: 36px;
     height: 36px;
-    /* background-color set dynamically in JavaScript based on comp type */
+    /* background-color set dynamically in JavaScript */
     border: 3px solid white;
-    border-radius: 50% 50% 50% 0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    transform: rotate(0deg);
-    cursor: pointer;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-.map-pin:hover {
-    transform: rotate(0deg) scale(1.1);
+.map-pin .pin-stem {
+    width: 3px;
+    height: 8px;
+    /* background-color set dynamically in JavaScript */
 }
 
 .map-pin span {
@@ -703,9 +723,9 @@ wa-radio:not(:defined) {
     font-weight: bold;
     font-size: 14px;
     user-select: none;
-    transform: rotate(0deg);
     display: block;
 }
+
 
 /* SweetAlert2 Modal Backdrop */
 .swal2-container {
@@ -746,6 +766,17 @@ wa-dialog wa-button:not([variant])::part(base):hover {
 #dialog-success wa-button[variant="brand"]::part(base):hover,
 #dialog-error wa-button[variant="brand"]::part(base):hover,
 #dialog-warning wa-button[variant="brand"]::part(base):hover {
+    background-color: #2a6596;
+    border-color: #2a6596;
+}
+
+/* Override "Stay here" button in unsaved changes dialog to blue */
+#dialog-unsaved-changes wa-button:not([variant])::part(base) {
+    background-color: #377eb8;
+    border-color: #377eb8;
+}
+
+#dialog-unsaved-changes wa-button:not([variant])::part(base):hover {
     background-color: #2a6596;
     border-color: #2a6596;
 }

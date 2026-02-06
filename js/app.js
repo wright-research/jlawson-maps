@@ -6,6 +6,7 @@ let currentMapId = null;  // null for new map, UUID for existing
 let map = null;           // Mapbox GL JS instance
 let geocoder = null;      // Mapbox Geocoder instance
 let lastSavedState = null; // Last saved map state for tracking changes
+let lastSavedName = null;  // Last saved map name for tracking changes
 
 // DOM elements
 const listView = document.getElementById('list-view');
@@ -64,6 +65,11 @@ async function initializeApp() {
             e.preventDefault();
             handleSave();
         }
+    });
+
+    // Track map name changes for save button state
+    mapNameInput.addEventListener('input', () => {
+        updateSaveButtonState();
     });
 
     // Populate county select dropdown
@@ -141,6 +147,7 @@ async function handleCountyToggle(e) {
 
     const selectedCounties = getSelectedCounties();
     await updateCountyBoundaries(map, enabled, selectedCounties);
+    updateSaveButtonState();
 }
 
 /**
@@ -155,6 +162,7 @@ async function handleCountySelection() {
     if (enabled) {
         await updateCountyBoundaries(map, enabled, selectedCounties);
     }
+    updateSaveButtonState();
 }
 
 /**
@@ -217,6 +225,8 @@ async function showListView(updateHistory = true) {
     currentView = 'list';
     currentMapId = null;
     lastSavedState = null;
+    lastSavedName = null;
+    btnSave.classList.remove('btn-saved');
 
     // Clean up geocoder instance if it exists
     if (geocoder) {
@@ -510,11 +520,11 @@ async function loadExistingMap(mapId) {
             enablePinPlacement(map);
 
             // Restore pins from saved state (handle both old and new format)
-            if (mapData.map_state.salePins || mapData.map_state.rentPins || mapData.map_state.landPins) {
+            if (mapData.map_state.subjectPins || mapData.map_state.salePins || mapData.map_state.rentPins || mapData.map_state.landPins) {
                 restorePins(map, mapData.map_state);
             } else if (mapData.map_state.pins && mapData.map_state.pins.length > 0) {
                 // Backwards compatibility: convert old pins format to sales pins
-                restorePins(map, { salePins: mapData.map_state.pins, rentPins: [], landPins: [] });
+                restorePins(map, { subjectPins: [], salePins: mapData.map_state.pins, rentPins: [], landPins: [] });
             }
 
             // Restore the selected comp type and filter pins accordingly
@@ -535,6 +545,10 @@ async function loadExistingMap(mapId) {
 
             // Store the relevant saved state for comparison later (only pins and counties)
             lastSavedState = JSON.stringify(getRelevantMapState(map));
+            lastSavedName = mapNameInput.value.trim();
+
+            // Mark save button as clean (just loaded)
+            updateSaveButtonState();
 
             loadingEditor.classList.add('hidden');
         });
@@ -880,17 +894,10 @@ async function handleSave() {
 
         // Update last saved state (only relevant parts: pins and counties)
         lastSavedState = JSON.stringify(getRelevantMapState(map));
+        lastSavedName = mapNameInput.value.trim();
 
         btnSave.disabled = false;
-
-        // Show success dialog
-        const dialog = document.getElementById('dialog-map-saved');
-        dialog.open = true;
-
-        // Auto-close after 1.5 seconds
-        setTimeout(() => {
-            dialog.open = false;
-        }, 1500);
+        updateSaveButtonState();
     } catch (error) {
         btnSave.disabled = false;
         const dialog = document.getElementById('dialog-error');
@@ -1116,12 +1123,37 @@ function getRelevantMapState(map) {
     if (!map || !map.userData) return null;
 
     return {
+        subjectPins: map.userData.subjectPins || [],
         salePins: map.userData.salePins || [],
         rentPins: map.userData.rentPins || [],
         landPins: map.userData.landPins || [],
         currentCompType: map.userData.currentCompType || 'sales',
         countyBoundaries: map.userData.countyBoundaries || { enabled: false, selectedCounties: [] }
     };
+}
+
+/**
+ * Update save button appearance based on whether there are unsaved changes
+ */
+function updateSaveButtonState() {
+    if (!map) return;
+
+    const currentState = JSON.stringify(getRelevantMapState(map));
+    const currentName = mapNameInput.value.trim();
+    const hasChanges = currentState !== lastSavedState || currentName !== lastSavedName;
+
+    if (hasChanges) {
+        btnSave.classList.remove('btn-saved');
+    } else {
+        btnSave.classList.add('btn-saved');
+    }
+}
+
+/**
+ * Called from map.js when pin data changes (add, delete, drag, renumber)
+ */
+function notifyMapDataChanged() {
+    updateSaveButtonState();
 }
 
 /**

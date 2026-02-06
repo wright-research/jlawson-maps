@@ -7,6 +7,7 @@ const DEFAULT_MAP_STATE = {
     bearing: 0,
     pitch: 0,
     style: 'mapbox://styles/mapbox/streets-v12',
+    subjectPins: [],
     salePins: [],
     rentPins: [],
     landPins: [],
@@ -18,8 +19,9 @@ const DEFAULT_MAP_STATE = {
 
 // Pin colors for each comp type
 const PIN_COLORS = {
-    sales: '#e41a1c',
-    rent: '#377eb8',
+    subject: '#e41a1c',
+    sales: '#377eb8',
+    rent: '#984ea3',
     land: '#4daf4a'
 };
 
@@ -59,6 +61,7 @@ function initializeMap(containerId, mapState = null) {
 
     // Initialize map data storage
     map.userData = {
+        subjectPins: state.subjectPins || [],
         salePins: state.salePins || [],
         rentPins: state.rentPins || [],
         landPins: state.landPins || [],
@@ -81,6 +84,7 @@ function getMapState(map) {
         bearing: map.getBearing(),
         pitch: map.getPitch(),
         style: 'mapbox://styles/mapbox/streets-v12',
+        subjectPins: map.userData?.subjectPins || [],
         salePins: map.userData?.salePins || [],
         rentPins: map.userData?.rentPins || [],
         landPins: map.userData?.landPins || [],
@@ -130,22 +134,31 @@ function enablePinPlacement(map) {
  */
 function addPin(map, lngLat) {
     const compType = map.userData.currentCompType || 'sales';
-    const pinArrayKey = compType === 'sales' ? 'salePins' : compType === 'rent' ? 'rentPins' : 'landPins';
+    const pinArrayKey = compType === 'subject' ? 'subjectPins' : compType === 'sales' ? 'salePins' : compType === 'rent' ? 'rentPins' : 'landPins';
     const pinArray = map.userData[pinArrayKey];
 
-    const pinNumber = (pinArray.length || 0) + 1;
+    // Limit to one subject pin
+    if (compType === 'subject' && pinArray.length > 0) {
+        const dialog = document.getElementById('dialog-warning');
+        const message = document.getElementById('warning-message');
+        message.textContent = 'Map can only have one subject pin! You can delete the existing subject pin by clicking on it.';
+        dialog.open = true;
+        return;
+    }
+
+    const pinLabel = compType === 'subject' ? 'S' : (pinArray.length || 0) + 1;
     const pinId = `pin-${nextPinId++}`;
     const pinColor = PIN_COLORS[compType];
 
     const pinData = {
         id: pinId,
         lngLat: [lngLat.lng, lngLat.lat],
-        number: pinNumber,
+        number: pinLabel,
         type: compType
     };
 
     // Create marker element with appropriate color
-    const el = createPinElement(pinNumber, pinColor);
+    const el = createPinElement(pinLabel, pinColor);
 
     // Create marker with anchor at bottom of pin
     const marker = new mapboxgl.Marker({
@@ -191,6 +204,9 @@ function addPin(map, lngLat) {
 
     // Add to appropriate pin array
     pinArray.push(pinData);
+
+    // Notify app of data change
+    if (typeof notifyMapDataChanged === 'function') notifyMapDataChanged();
 }
 
 /**
@@ -202,8 +218,7 @@ function addPin(map, lngLat) {
 function createPinElement(number, color = '#e41a1c') {
     const el = document.createElement('div');
     el.className = 'map-pin';
-    el.style.backgroundColor = color;
-    el.innerHTML = `<span>${number}</span>`;
+    el.innerHTML = `<div class="pin-head" style="background-color: ${color};"><span>${number}</span></div><div class="pin-stem" style="background-color: ${color};"></div>`;
     return el;
 }
 
@@ -217,16 +232,30 @@ function showPinMenu(map, marker) {
     const input = document.getElementById('pin-renumber-input');
     const renumberBtn = document.getElementById('confirm-renumber-pin');
     const deleteBtn = document.getElementById('confirm-delete-pin');
+    const renumberSection = input.closest('div');
+
+    const isSubject = marker.compType === 'subject';
 
     // Set dialog title and input value
-    dialog.label = `Renumber Pin ${marker.pinData.number}`;
-    input.value = marker.pinData.number;
+    dialog.label = isSubject ? 'Edit Subject Pin' : `Edit Pin ${marker.pinData.number}`;
+
+    // Hide renumber input and button for subject pins
+    if (isSubject) {
+        renumberSection.style.display = 'none';
+        renumberBtn.style.display = 'none';
+    } else {
+        renumberSection.style.display = '';
+        renumberBtn.style.display = '';
+        input.value = marker.pinData.number;
+    }
 
     // Show dialog
     dialog.open = true;
 
-    // Focus input after dialog opens
-    setTimeout(() => input.focus(), 100);
+    // Focus input after dialog opens (only for non-subject pins)
+    if (!isSubject) {
+        setTimeout(() => input.focus(), 100);
+    }
 
     // Handle renumber button click
     const handleRenumber = () => {
@@ -297,7 +326,7 @@ function deletePin(map, marker) {
 
     // Remove from appropriate pin array based on comp type
     const compType = marker.compType || 'sales';
-    const pinArrayKey = compType === 'sales' ? 'salePins' : compType === 'rent' ? 'rentPins' : 'landPins';
+    const pinArrayKey = compType === 'subject' ? 'subjectPins' : compType === 'sales' ? 'salePins' : compType === 'rent' ? 'rentPins' : 'landPins';
     const pinArray = map.userData[pinArrayKey];
 
     if (pinArray) {
@@ -309,6 +338,9 @@ function deletePin(map, marker) {
 
     // Remove marker from map
     marker.remove();
+
+    // Notify app of data change
+    if (typeof notifyMapDataChanged === 'function') notifyMapDataChanged();
 }
 
 /**
@@ -317,6 +349,15 @@ function deletePin(map, marker) {
  */
 function updateMapPins(map) {
     // Separate markers by type
+    map.userData.subjectPins = mapMarkers
+        .filter(marker => marker.compType === 'subject')
+        .map(marker => ({
+            id: marker.pinData.id,
+            lngLat: marker.pinData.lngLat,
+            number: marker.pinData.number,
+            type: 'subject'
+        }));
+
     map.userData.salePins = mapMarkers
         .filter(marker => marker.compType === 'sales')
         .map(marker => ({
@@ -343,6 +384,9 @@ function updateMapPins(map) {
             number: marker.pinData.number,
             type: 'land'
         }));
+
+    // Notify app of data change
+    if (typeof notifyMapDataChanged === 'function') notifyMapDataChanged();
 }
 
 /**
@@ -354,8 +398,9 @@ function restorePins(map, mapState) {
     // Clear existing markers
     clearAllPins(map);
 
-    // Restore all three pin types
+    // Restore all four pin types
     const allPins = [
+        ...(mapState.subjectPins || []).map(p => ({ ...p, type: 'subject' })),
         ...(mapState.salePins || []).map(p => ({ ...p, type: 'sales' })),
         ...(mapState.rentPins || []).map(p => ({ ...p, type: 'rent' })),
         ...(mapState.landPins || []).map(p => ({ ...p, type: 'land' }))
@@ -415,6 +460,7 @@ function restorePins(map, mapState) {
     });
 
     // Update map user data
+    map.userData.subjectPins = mapState.subjectPins || [];
     map.userData.salePins = mapState.salePins || [];
     map.userData.rentPins = mapState.rentPins || [];
     map.userData.landPins = mapState.landPins || [];
@@ -427,6 +473,7 @@ function restorePins(map, mapState) {
 function clearAllPins(map) {
     mapMarkers.forEach(marker => marker.remove());
     mapMarkers = [];
+    map.userData.subjectPins = [];
     map.userData.salePins = [];
     map.userData.rentPins = [];
     map.userData.landPins = [];
@@ -440,9 +487,9 @@ function clearAllPins(map) {
 function switchCompType(map, compType) {
     map.userData.currentCompType = compType;
 
-    // Show/hide markers based on comp type
+    // Show/hide markers based on comp type (subject pins always visible)
     mapMarkers.forEach(marker => {
-        if (marker.compType === compType) {
+        if (marker.compType === 'subject' || marker.compType === compType) {
             marker.getElement().style.display = '';
         } else {
             marker.getElement().style.display = 'none';

@@ -771,14 +771,15 @@ wa-dialog wa-button:not([variant])::part(base):hover {
 }
 
 /* Override "Stay here" button in unsaved changes dialog to blue */
-#dialog-unsaved-changes wa-button:not([variant])::part(base) {
-    background-color: #377eb8;
-    border-color: #377eb8;
+#dialog-unsaved-changes wa-button[data-dialog="close"]::part(base) {
+    background-color: #377eb8 !important;
+    border-color: #377eb8 !important;
+    color: white !important;
 }
 
-#dialog-unsaved-changes wa-button:not([variant])::part(base):hover {
-    background-color: #2a6596;
-    border-color: #2a6596;
+#dialog-unsaved-changes wa-button[data-dialog="close"]::part(base):hover {
+    background-color: #2a6596 !important;
+    border-color: #2a6596 !important;
 }
 
 /* Override danger variant to match our red buttons */

@@ -65,7 +65,7 @@ function initializeMap(containerId, mapState = null) {
         salePins: state.salePins || [],
         rentPins: state.rentPins || [],
         landPins: state.landPins || [],
-        currentCompType: state.currentCompType || 'sales', // Track which layer is active
+        currentCompType: state.currentCompType || 'subject', // Track which layer is active
         countyBoundaries: state.countyBoundaries || DEFAULT_MAP_STATE.countyBoundaries
     };
 
@@ -88,7 +88,7 @@ function getMapState(map) {
         salePins: map.userData?.salePins || [],
         rentPins: map.userData?.rentPins || [],
         landPins: map.userData?.landPins || [],
-        currentCompType: map.userData?.currentCompType || 'sales',
+        currentCompType: map.userData?.currentCompType || 'subject',
         countyBoundaries: map.userData?.countyBoundaries || DEFAULT_MAP_STATE.countyBoundaries
     };
 }
@@ -133,7 +133,7 @@ function enablePinPlacement(map) {
  * @param {Object} lngLat - The {lng, lat} coordinates
  */
 function addPin(map, lngLat) {
-    const compType = map.userData.currentCompType || 'sales';
+    const compType = map.userData.currentCompType || 'subject';
     const pinArrayKey = compType === 'subject' ? 'subjectPins' : compType === 'sales' ? 'salePins' : compType === 'rent' ? 'rentPins' : 'landPins';
     const pinArray = map.userData[pinArrayKey];
 

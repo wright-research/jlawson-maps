@@ -528,7 +528,7 @@ async function loadExistingMap(mapId) {
             }
 
             // Restore the selected comp type and filter pins accordingly
-            const savedCompType = mapData.map_state.currentCompType || 'sales';
+            const savedCompType = mapData.map_state.currentCompType || 'subject';
             compTypeRadioGroup.value = savedCompType;
             switchCompType(map, savedCompType);
 
@@ -1070,7 +1070,7 @@ async function handleExportImage() {
 
         // Generate filename with map name and comp type
         const mapName = mapNameInput.value.trim() || 'map';
-        const compType = map.userData.currentCompType || 'sales';
+        const compType = map.userData.currentCompType || 'subject';
         const filename = `${mapName}-${compType}.png`;
 
         link.download = filename;
@@ -1127,7 +1127,7 @@ function getRelevantMapState(map) {
         salePins: map.userData.salePins || [],
         rentPins: map.userData.rentPins || [],
         landPins: map.userData.landPins || [],
-        currentCompType: map.userData.currentCompType || 'sales',
+        currentCompType: map.userData.currentCompType || 'subject',
         countyBoundaries: map.userData.countyBoundaries || { enabled: false, selectedCounties: [] }
     };
 }

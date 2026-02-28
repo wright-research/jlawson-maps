@@ -108,18 +108,7 @@ button:disabled {
 #map-search {
     width: 350px;
     max-width: 350px;
-    font-family: inherit;
-    font-size: 14px;
-    padding: 10px 15px;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    outline: none;
     margin-left: auto;
-}
-
-#map-search:focus {
-    border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
 .maps-grid {
@@ -383,6 +372,7 @@ button:disabled {
         max-width: none;
         min-width: 0;
         margin-left: 0;
+        align-self: stretch;
     }
 
     /* Make "+ New Map" button just show "+" as a square button */
@@ -795,4 +785,158 @@ wa-dialog wa-button:not([variant])::part(base):hover {
 #dialog-delete-map wa-button[variant="danger"]::part(base):hover {
     background-color: #c21618;
     border-color: #c21618;
+}
+
+/* Measure Distance Widget */
+#measure-widget {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+}
+
+.btn-measure-toggle {
+    width: 220px;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-measure-toggle:hover {
+    background: #eff6ff;
+    color: #2563eb;
+    border-color: #93c5fd;
+}
+
+.btn-measure-toggle:active {
+    background: #1d4ed8;
+    color: white;
+    border-color: #1d4ed8;
+}
+
+.btn-measure-toggle.active {
+    background: #2563eb;
+    color: white;
+    border-color: #2563eb;
+}
+
+.btn-measure-toggle.active:hover {
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+}
+
+.btn-measure-toggle.active:active {
+    background: #1e3a8a;
+    border-color: #1e3a8a;
+}
+
+.measure-panel {
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    width: 220px;
+    overflow: hidden;
+}
+
+.measure-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    margin-bottom: 0;
+    font-size: 14px;
+    font-weight: 600;
+    background: #2563eb;
+    color: white;
+}
+
+.measure-panel-header button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 15px;
+    color: rgba(255, 255, 255, 0.85);
+    padding: 0 2px;
+}
+
+.measure-panel-header button:hover {
+    color: white;
+}
+
+.measure-panel-body {
+    padding: 12px 14px 14px;
+    background: white;
+}
+
+.measure-units {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+.measure-units label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+}
+
+.measure-result {
+    font-size: 13px;
+    color: #374151;
+    min-height: 20px;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.btn-measure-finish {
+    width: 100%;
+    padding: 6px 0;
+    font-size: 13px;
+    font-family: inherit;
+    background: #dcfce7;
+    border: 1px solid #86efac;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #15803d;
+    margin-bottom: 6px;
+}
+
+.btn-measure-finish:hover {
+    background: #bbf7d0;
+}
+
+.btn-measure-clear {
+    width: 100%;
+    padding: 6px 0;
+    font-size: 13px;
+    font-family: inherit;
+    background: #f3f4f6;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.btn-measure-clear:hover {
+    background: #e5e7eb;
+}
+
+/* Hide Mapbox logo (keep attribution text) */
+a.mapboxgl-ctrl-logo {
+    display: none !important;
 }

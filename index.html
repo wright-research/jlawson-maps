@@ -25,7 +25,7 @@
     <div id="list-view">
         <header>
             <h1><span class="title-line-1">J. Lawson & Associates</span> <span class="title-line-2">Appraisal Maps</span></h1>
-            <input type="text" id="map-search" placeholder="Search saved maps...">
+            <wa-input id="map-search" placeholder="Search saved maps..." with-clear></wa-input>
             <button id="btn-new-map" class="btn-primary">+ New Map</button>
         </header>
         <div class="search-container">
@@ -84,6 +84,27 @@
         </div>
 
         <div id="map-container"></div>
+
+        <!-- Measure Distance Widget -->
+        <div id="measure-widget">
+            <div id="measure-panel" class="measure-panel hidden">
+                <div class="measure-panel-header">
+                    <span>Measure Distance</span>
+                    <button id="btn-measure-close" aria-label="Close">&#x2715;</button>
+                </div>
+                <div class="measure-panel-body">
+                    <div class="measure-units">
+                        <label><input type="radio" name="measure-unit" value="miles" checked> Miles</label>
+                        <label><input type="radio" name="measure-unit" value="feet"> Feet</label>
+                    </div>
+                    <div id="measure-result" class="measure-result">Click the map to start measuring</div>
+                    <button id="btn-measure-finish" class="btn-measure-finish">Finish</button>
+                    <button id="btn-measure-clear" class="btn-measure-clear">Clear</button>
+                </div>
+            </div>
+            <button id="btn-measure-toggle" class="btn-measure-toggle"><wa-icon name="tape"></wa-icon> Measure Distance</button>
+        </div>
+
         <div id="loading-editor" class="loading hidden">
             <p>Loading map...</p>
         </div>
@@ -189,6 +210,8 @@
         import 'https://cdn.jsdelivr.net/npm/@awesome.me/webawesome@latest/dist-cdn/components/dialog/dialog.js';
         import 'https://cdn.jsdelivr.net/npm/@awesome.me/webawesome@latest/dist-cdn/components/button/button.js';
         import 'https://cdn.jsdelivr.net/npm/@awesome.me/webawesome@latest/dist-cdn/components/textarea/textarea.js';
+        import 'https://cdn.jsdelivr.net/npm/@awesome.me/webawesome@latest/dist-cdn/components/input/input.js';
+        import 'https://cdn.jsdelivr.net/npm/@awesome.me/webawesome@latest/dist-cdn/components/icon/icon.js';
     </script>
 
     <!-- Supabase JS Client -->
@@ -199,6 +222,9 @@
 
     <!-- html2canvas for image export with DOM elements -->
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+    <!-- Turf.js for geodetic distance calculations -->
+    <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
 
     <!-- Application Scripts -->
     <script src="js/config.js"></script>

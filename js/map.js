@@ -56,8 +56,11 @@ function initializeMap(containerId, mapState = null) {
     // Add navigation controls
     map.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
-    // Add fullscreen control
-    map.addControl(new mapboxgl.FullscreenControl(), 'top-right');
+    // disable map rotation using right click + drag
+    map.dragRotate.disable();
+
+    // disable map rotation using touch rotation gesture
+    map.touchZoomRotate.disableRotation();
 
     // Initialize map data storage
     map.userData = {
@@ -118,6 +121,9 @@ function applyMapState(map, mapState) {
  */
 function enablePinPlacement(map) {
     map.on('click', (e) => {
+        // Don't add pin if measurement mode is active
+        if (map.userData.isMeasuring) return;
+
         // Don't add pin if clicking on existing marker
         const features = map.queryRenderedFeatures(e.point);
         const clickedMarker = features.find(f => f.layer?.id?.startsWith('marker-'));
@@ -559,4 +565,209 @@ async function restoreCountyBoundaries(map, countyBoundaries) {
         countyBoundaries.enabled,
         countyBoundaries.selectedCounties
     );
+}
+
+/**
+ * Initialize the measurement tool GeoJSON sources, layers, and event handlers
+ * @param {mapboxgl.Map} map - The map instance
+ */
+function initializeMeasurementTool(map) {
+    map.userData.isMeasuring = false;
+    map.userData.measurePaused = false;
+    map.userData.measureGeojson = { type: 'FeatureCollection', features: [] };
+    map.userData.measureLinestring = {
+        type: 'Feature',
+        geometry: { type: 'LineString', coordinates: [] }
+    };
+
+    map.addSource('measure-geojson', {
+        type: 'geojson',
+        data: map.userData.measureGeojson
+    });
+
+    map.addLayer({
+        id: 'measure-points',
+        type: 'circle',
+        source: 'measure-geojson',
+        paint: { 'circle-radius': 5, 'circle-color': '#000' },
+        filter: ['in', '$type', 'Point']
+    });
+
+    map.addLayer({
+        id: 'measure-lines',
+        type: 'line',
+        source: 'measure-geojson',
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': '#000', 'line-width': 2.5 },
+        filter: ['in', '$type', 'LineString']
+    });
+
+    // Rubber-band preview line (dotted, from last point to cursor)
+    map.addSource('measure-preview', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] }
+    });
+
+    map.addLayer({
+        id: 'measure-preview-line',
+        type: 'line',
+        source: 'measure-preview',
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: {
+            'line-color': '#374151',
+            'line-width': 2,
+            'line-dasharray': [3, 3],
+            'line-opacity': 0.7
+        }
+    });
+
+    // Distance label that follows the rubber-band preview line midpoint
+    map.addSource('measure-preview-label', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] }
+    });
+
+    map.addLayer({
+        id: 'measure-preview-label-layer',
+        type: 'symbol',
+        source: 'measure-preview-label',
+        layout: {
+            'text-field': ['get', 'label'],
+            'text-size': 12,
+            'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+            'text-offset': [0, -0.8],
+            'text-anchor': 'bottom',
+            'text-allow-overlap': true
+        },
+        paint: {
+            'text-color': '#4b5563',
+            'text-halo-color': '#ffffff',
+            'text-halo-width': 2
+        }
+    });
+
+    // Separate source for per-segment distance labels
+    map.addSource('measure-labels', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] }
+    });
+
+    map.addLayer({
+        id: 'measure-segment-labels',
+        type: 'symbol',
+        source: 'measure-labels',
+        layout: {
+            'text-field': ['get', 'label'],
+            'text-size': 12,
+            'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+            'text-offset': [0, -0.8],
+            'text-anchor': 'bottom',
+            'text-allow-overlap': true
+        },
+        paint: {
+            'text-color': '#111827',
+            'text-halo-color': '#ffffff',
+            'text-halo-width': 2
+        }
+    });
+
+    map.on('click', (e) => {
+        if (!map.userData.isMeasuring) return;
+
+        const geojson = map.userData.measureGeojson;
+        const linestring = map.userData.measureLinestring;
+
+        if (geojson.features.length > 1) geojson.features.pop(); // remove old linestring
+
+        const features = map.queryRenderedFeatures(e.point, { layers: ['measure-points'] });
+
+        if (features.length) {
+            const id = features[0].properties.id;
+            geojson.features = geojson.features.filter(p => p.properties.id !== id);
+        } else {
+            geojson.features.push({
+                type: 'Feature',
+                geometry: { type: 'Point', coordinates: [e.lngLat.lng, e.lngLat.lat] },
+                properties: { id: String(new Date().getTime()) }
+            });
+        }
+
+        if (geojson.features.length > 1) {
+            linestring.geometry.coordinates = geojson.features.map(p => p.geometry.coordinates);
+            geojson.features.push(linestring);
+        }
+
+        map.getSource('measure-geojson').setData(geojson);
+
+        // Resume rubber-band preview from the new last point
+        map.userData.measurePaused = false;
+
+        if (typeof updateMeasureDisplay === 'function') updateMeasureDisplay(map);
+    });
+
+    map.on('mousemove', (e) => {
+        if (!map.userData.isMeasuring) return;
+
+        const features = map.queryRenderedFeatures(e.point, { layers: ['measure-points'] });
+        map.getCanvas().style.cursor = features.length ? 'pointer' : 'crosshair';
+
+        // When paused (user clicked Finish), hide preview until next click
+        if (map.userData.measurePaused) return;
+
+        const points = map.userData.measureGeojson.features.filter(f => f.geometry.type === 'Point');
+        const previewSource = map.getSource('measure-preview');
+        const previewLabelSource = map.getSource('measure-preview-label');
+        if (!previewSource) return;
+
+        if (points.length > 0) {
+            const lastCoord = points[points.length - 1].geometry.coordinates;
+            const currentCoord = [e.lngLat.lng, e.lngLat.lat];
+
+            previewSource.setData({
+                type: 'FeatureCollection',
+                features: [{
+                    type: 'Feature',
+                    geometry: { type: 'LineString', coordinates: [lastCoord, currentCoord] },
+                    properties: {}
+                }]
+            });
+
+            // Distance label at the midpoint of the preview segment
+            if (previewLabelSource) {
+                const unit = document.querySelector('input[name="measure-unit"]:checked')?.value || 'miles';
+                const dist = turf.length(turf.lineString([lastCoord, currentCoord]), { units: unit });
+                const mid = turf.midpoint(turf.point(lastCoord), turf.point(currentCoord));
+                mid.properties = {
+                    label: unit === 'feet'
+                        ? `${Math.round(dist).toLocaleString()} ft`
+                        : `${dist.toFixed(2)} mi`
+                };
+                previewLabelSource.setData({ type: 'FeatureCollection', features: [mid] });
+            }
+        } else {
+            previewSource.setData({ type: 'FeatureCollection', features: [] });
+            if (previewLabelSource) {
+                previewLabelSource.setData({ type: 'FeatureCollection', features: [] });
+            }
+        }
+    });
+}
+
+/**
+ * Reset measurement data and clear the map source
+ * @param {mapboxgl.Map} map - The map instance
+ */
+function resetMeasurement(map) {
+    if (!map || !map.userData) return;
+    map.userData.measureGeojson = { type: 'FeatureCollection', features: [] };
+    map.userData.measureLinestring = {
+        type: 'Feature',
+        geometry: { type: 'LineString', coordinates: [] }
+    };
+    map.userData.measurePaused = false;
+    const empty = { type: 'FeatureCollection', features: [] };
+    if (map.getSource('measure-geojson')) map.getSource('measure-geojson').setData(map.userData.measureGeojson);
+    if (map.getSource('measure-labels')) map.getSource('measure-labels').setData(empty);
+    if (map.getSource('measure-preview')) map.getSource('measure-preview').setData(empty);
+    if (map.getSource('measure-preview-label')) map.getSource('measure-preview-label').setData(empty);
 }

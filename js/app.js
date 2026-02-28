@@ -84,9 +84,47 @@ async function initializeApp() {
 
     // Add search functionality
     mapSearch.addEventListener('input', handleSearch);
+    mapSearch.addEventListener('wa-clear', handleSearch);
 
     // Handle browser back/forward buttons
     window.addEventListener('popstate', handleUrlChange);
+
+    // Measure distance widget event listeners
+    const btnMeasureToggle = document.getElementById('btn-measure-toggle');
+    const btnMeasureClose = document.getElementById('btn-measure-close');
+    const btnMeasureFinish = document.getElementById('btn-measure-finish');
+    const btnMeasureClear = document.getElementById('btn-measure-clear');
+
+    btnMeasureToggle.addEventListener('click', () => {
+        if (!map) return;
+        if (map.userData.isMeasuring) {
+            deactivateMeasure();
+        } else {
+            activateMeasure();
+        }
+    });
+
+    btnMeasureClose.addEventListener('click', () => deactivateMeasure());
+
+    btnMeasureFinish.addEventListener('click', () => {
+        if (!map) return;
+        map.userData.measurePaused = true;
+        const empty = { type: 'FeatureCollection', features: [] };
+        if (map.getSource('measure-preview')) map.getSource('measure-preview').setData(empty);
+        if (map.getSource('measure-preview-label')) map.getSource('measure-preview-label').setData(empty);
+    });
+
+    btnMeasureClear.addEventListener('click', () => {
+        if (!map) return;
+        resetMeasurement(map);
+        updateMeasureDisplay(map);
+    });
+
+    document.querySelectorAll('input[name="measure-unit"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+            if (map) updateMeasureDisplay(map);
+        });
+    });
 
     // Check URL for map ID and open it if present
     const urlMapId = getMapIdFromUrl();
@@ -234,6 +272,13 @@ async function showListView(updateHistory = true) {
         document.getElementById('geocoder-container').innerHTML = '';
     }
 
+    // Reset measure widget state
+    if (map && map.userData) {
+        map.userData.isMeasuring = false;
+    }
+    document.getElementById('btn-measure-toggle').classList.remove('active');
+    document.getElementById('measure-panel').classList.add('hidden');
+
     // Clean up map instance if it exists
     if (map) {
         map.remove();
@@ -297,6 +342,7 @@ async function showEditorView(mapId = null, mapName = 'Untitled Map', updateHist
                 map.resize();
             });
             enablePinPlacement(map);
+            initializeMeasurementTool(map);
             setupMapControls();
             initializeGeocoder();
         });
@@ -518,6 +564,9 @@ async function loadExistingMap(mapId) {
 
             // Enable pin placement
             enablePinPlacement(map);
+
+            // Initialize measurement tool
+            initializeMeasurementTool(map);
 
             // Restore pins from saved state (handle both old and new format)
             if (mapData.map_state.subjectPins || mapData.map_state.salePins || mapData.map_state.rentPins || mapData.map_state.landPins) {
@@ -1038,13 +1087,16 @@ async function handleExportImage() {
         btnExportImage.disabled = true;
         btnExportImage.textContent = 'Exporting...';
 
-        // Hide map controls and comp type controls during export
+        // Hide map controls, comp type controls, and measure widget during export
         const mapControls = document.getElementById('map-controls');
         const compTypeControls = document.getElementById('comp-type-controls');
+        const measureWidget = document.getElementById('measure-widget');
         const originalMapControlsDisplay = mapControls.style.display;
         const originalCompTypeControlsDisplay = compTypeControls.style.display;
+        const originalMeasureDisplay = measureWidget.style.display;
         mapControls.style.display = 'none';
         compTypeControls.style.display = 'none';
+        measureWidget.style.display = 'none';
 
         // Wait for map to settle
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -1061,6 +1113,7 @@ async function handleExportImage() {
         // Restore controls
         mapControls.style.display = originalMapControlsDisplay;
         compTypeControls.style.display = originalCompTypeControlsDisplay;
+        measureWidget.style.display = originalMeasureDisplay;
 
         // Convert canvas to data URL (PNG format)
         const dataURL = canvas.toDataURL('image/png');
@@ -1101,8 +1154,10 @@ async function handleExportImage() {
         // Restore controls in case of error
         const mapControls = document.getElementById('map-controls');
         const compTypeControls = document.getElementById('comp-type-controls');
+        const measureWidget = document.getElementById('measure-widget');
         mapControls.style.display = '';
         compTypeControls.style.display = '';
+        measureWidget.style.display = '';
 
         // Reset button
         btnExportImage.disabled = false;
@@ -1154,6 +1209,83 @@ function updateSaveButtonState() {
  */
 function notifyMapDataChanged() {
     updateSaveButtonState();
+}
+
+/**
+ * Update the measure distance display with the current measurement
+ * @param {mapboxgl.Map} map - The map instance
+ */
+function updateMeasureDisplay(map) {
+    const result = document.getElementById('measure-result');
+    if (!result) return;
+    const geojson = map.userData.measureGeojson;
+    const linestring = map.userData.measureLinestring;
+    const points = geojson.features.filter(f => f.geometry.type === 'Point');
+    const pointCount = points.length;
+
+    if (pointCount < 2) {
+        result.textContent = pointCount === 1 ? 'Click to add another point' : 'Click the map to start measuring';
+        if (map.getSource('measure-labels')) {
+            map.getSource('measure-labels').setData({ type: 'FeatureCollection', features: [] });
+        }
+        return;
+    }
+
+    const unit = document.querySelector('input[name="measure-unit"]:checked')?.value || 'miles';
+
+    // Update total in widget
+    const distance = turf.length(linestring, { units: unit });
+    const formatted = unit === 'feet'
+        ? `${Math.round(distance).toLocaleString()} ft`
+        : `${distance.toFixed(2)} mi`;
+    result.textContent = `Total: ${formatted}`;
+
+    // Build per-segment midpoint labels
+    const segmentFeatures = [];
+    for (let i = 0; i < points.length - 1; i++) {
+        const segLine = turf.lineString([
+            points[i].geometry.coordinates,
+            points[i + 1].geometry.coordinates
+        ]);
+        const segDist = turf.length(segLine, { units: unit });
+        const mid = turf.midpoint(points[i], points[i + 1]);
+        mid.properties = {
+            label: unit === 'feet'
+                ? `${Math.round(segDist).toLocaleString()} ft`
+                : `${segDist.toFixed(2)} mi`
+        };
+        segmentFeatures.push(mid);
+    }
+    if (map.getSource('measure-labels')) {
+        map.getSource('measure-labels').setData({
+            type: 'FeatureCollection',
+            features: segmentFeatures
+        });
+    }
+}
+
+/**
+ * Activate measurement mode
+ */
+function activateMeasure() {
+    if (!map) return;
+    map.userData.isMeasuring = true;
+    document.getElementById('btn-measure-toggle').classList.add('active');
+    document.getElementById('measure-panel').classList.remove('hidden');
+    map.getCanvas().style.cursor = 'crosshair';
+    updateMeasureDisplay(map);
+}
+
+/**
+ * Deactivate measurement mode and clear measurement
+ */
+function deactivateMeasure() {
+    if (!map) return;
+    map.userData.isMeasuring = false;
+    document.getElementById('btn-measure-toggle').classList.remove('active');
+    document.getElementById('measure-panel').classList.add('hidden');
+    map.getCanvas().style.cursor = '';
+    resetMeasurement(map);
 }
 
 /**

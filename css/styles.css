@@ -195,6 +195,148 @@ button:disabled {
     transform: translateY(-1px);
 }
 
+/* View Toggle Button */
+.btn-toggle-view {
+    position: relative;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 8px 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #374151;
+    transition: all 0.2s ease;
+}
+
+.btn-toggle-view:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.btn-toggle-view .tooltip {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #1f2937;
+    color: white;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    margin-top: 5px;
+}
+
+.btn-toggle-view:hover .tooltip {
+    opacity: 1;
+}
+
+/* Maps Table View */
+.maps-table-container {
+    flex: 1;
+    overflow-y: auto;
+    margin: 30px;
+    padding: 0;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    background: white;
+}
+
+.maps-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+}
+
+.maps-table thead th {
+    background: #f9fafb;
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    border-bottom: 2px solid #e5e7eb;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.maps-table thead th.sortable {
+    cursor: pointer;
+    user-select: none;
+}
+
+.maps-table thead th.sortable:hover {
+    background: #e5e7eb;
+}
+
+.maps-table thead th .sort-arrow {
+    display: inline-block;
+    margin-left: 4px;
+    font-size: 11px;
+    color: #9ca3af;
+}
+
+.maps-table thead th.sort-asc .sort-arrow,
+.maps-table thead th.sort-desc .sort-arrow {
+    color: #111827;
+}
+
+.maps-table thead th:nth-child(n+3) {
+    text-align: center;
+}
+
+.maps-table tbody tr {
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.maps-table tbody tr:hover {
+    background: #e5e7eb;
+}
+
+.maps-table tbody td {
+    padding: 10px 16px;
+    font-size: 14px;
+    color: #111827;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.maps-table tbody td:nth-child(n+3) {
+    text-align: center;
+}
+
+.maps-table .table-map-name {
+    font-weight: 600;
+    word-break: break-word;
+}
+
+.maps-table .table-date {
+    color: #6b7280;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.maps-table .table-action-btn {
+    padding: 6px 10px;
+    font-size: 14px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.maps-table .table-action-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
 /* Empty State */
 .empty-state {
     position: absolute;
@@ -373,6 +515,10 @@ button:disabled {
         min-width: 0;
         margin-left: 0;
         align-self: stretch;
+    }
+
+    .btn-toggle-view {
+        display: none;
     }
 
     /* Make "+ New Map" button just show "+" as a square button */

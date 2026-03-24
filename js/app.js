@@ -21,6 +21,12 @@ const countySelect = document.getElementById('county-select');
 const countySelectContainer = document.getElementById('county-select-container');
 const compTypeRadioGroup = document.getElementById('comp-type-radio-group');
 const mapSearch = document.getElementById('map-search');
+const mapsTableContainer = document.getElementById('maps-table-container');
+const mapsTableBody = document.getElementById('maps-table-body');
+const btnToggleView = document.getElementById('btn-toggle-view');
+let listViewMode = 'grid'; // 'grid' or 'table'
+let tableSortColumn = null; // 'name' or 'date'
+let tableSortAsc = true;
 
 // Buttons
 const btnNewMap = document.getElementById('btn-new-map');
@@ -81,6 +87,14 @@ async function initializeApp() {
 
     // Add comp type radio group event listener
     compTypeRadioGroup.addEventListener('change', handleCompTypeChange);
+
+    // Add view toggle listener
+    btnToggleView.addEventListener('click', handleToggleView);
+
+    // Add sortable column listeners
+    document.querySelectorAll('.maps-table thead th.sortable').forEach(th => {
+        th.addEventListener('click', () => handleTableSort(th.dataset.sort));
+    });
 
     // Add search functionality
     mapSearch.addEventListener('input', handleSearch);
@@ -294,6 +308,19 @@ async function showListView(updateHistory = true) {
         updateUrl(null);
     }
 
+    // Reset to grid view and sort state
+    listViewMode = 'grid';
+    tableSortColumn = null;
+    tableSortAsc = true;
+    mapsList.classList.remove('hidden');
+    mapsTableContainer.classList.add('hidden');
+    document.getElementById('toggle-icon-grid').classList.add('hidden');
+    document.getElementById('toggle-icon-list').classList.remove('hidden');
+    document.querySelectorAll('.maps-table thead th.sortable').forEach(th => {
+        th.classList.remove('sort-asc', 'sort-desc');
+        th.querySelector('.sort-arrow').innerHTML = '&#9650;';
+    });
+
     // Clear search box
     mapSearch.value = '';
 
@@ -404,8 +431,9 @@ async function loadMapsList() {
             // Show empty state
             emptyState.classList.remove('hidden');
         } else {
-            // Render map cards
+            // Render both views (only one is visible at a time)
             renderMapList(maps);
+            renderMapTable(maps);
         }
     } catch (error) {
         loadingList.classList.add('hidden');
@@ -421,23 +449,29 @@ async function loadMapsList() {
  */
 function handleSearch() {
     const searchTerm = mapSearch.value.toLowerCase().trim();
-    const mapCards = document.querySelectorAll('.map-card');
 
+    // Filter card view
+    const mapCards = document.querySelectorAll('.map-card');
     mapCards.forEach(card => {
         const mapName = card.querySelector('h3').textContent.toLowerCase();
         const mapNote = (card.dataset.note || '').toLowerCase();
-
-        // Search in both name and note
-        if (mapName.includes(searchTerm) || mapNote.includes(searchTerm)) {
-            card.style.display = '';
-        } else {
-            card.style.display = 'none';
-        }
+        card.style.display = (mapName.includes(searchTerm) || mapNote.includes(searchTerm)) ? '' : 'none';
     });
 
-    // Show empty state if no visible cards
-    const visibleCards = Array.from(mapCards).filter(card => card.style.display !== 'none');
-    if (visibleCards.length === 0 && searchTerm !== '') {
+    // Filter table view
+    const tableRows = mapsTableBody.querySelectorAll('tr');
+    tableRows.forEach(row => {
+        const mapName = row.querySelector('.table-map-name').textContent.toLowerCase();
+        const mapNote = (row.dataset.note || '').toLowerCase();
+        row.style.display = (mapName.includes(searchTerm) || mapNote.includes(searchTerm)) ? '' : 'none';
+    });
+
+    // Show empty state if no visible items in the active view
+    const visibleCards = Array.from(mapCards).filter(c => c.style.display !== 'none');
+    const visibleRows = Array.from(tableRows).filter(r => r.style.display !== 'none');
+    const noneVisible = listViewMode === 'grid' ? visibleCards.length === 0 : visibleRows.length === 0;
+
+    if (noneVisible && searchTerm !== '') {
         emptyState.classList.remove('hidden');
         emptyState.querySelector('p').textContent = 'No maps match your search.';
     } else {
@@ -531,6 +565,168 @@ function renderMapList(maps) {
     });
 
     document.querySelectorAll('.btn-delete').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            handleDeleteMap(btn.dataset.id, btn.dataset.name);
+        });
+    });
+}
+
+/**
+ * Toggle between grid (cards) and table (list) view
+ */
+function handleToggleView() {
+    const gridIcon = document.getElementById('toggle-icon-grid');
+    const listIcon = document.getElementById('toggle-icon-list');
+
+    if (listViewMode === 'grid') {
+        listViewMode = 'table';
+        mapsList.classList.add('hidden');
+        mapsTableContainer.classList.remove('hidden');
+        // Show grid icon (to switch back)
+        gridIcon.classList.remove('hidden');
+        listIcon.classList.add('hidden');
+    } else {
+        listViewMode = 'grid';
+        mapsList.classList.remove('hidden');
+        mapsTableContainer.classList.add('hidden');
+        // Show list icon (to switch to table)
+        gridIcon.classList.add('hidden');
+        listIcon.classList.remove('hidden');
+    }
+
+    // Re-apply search filter
+    handleSearch();
+}
+
+/**
+ * Sort the table rows by column
+ * @param {string} column - 'name' or 'date'
+ */
+function handleTableSort(column) {
+    if (tableSortColumn === column) {
+        tableSortAsc = !tableSortAsc;
+    } else {
+        tableSortColumn = column;
+        tableSortAsc = true;
+    }
+
+    // Update header classes and arrow indicators
+    document.querySelectorAll('.maps-table thead th.sortable').forEach(th => {
+        th.classList.remove('sort-asc', 'sort-desc');
+        th.querySelector('.sort-arrow').innerHTML = '&#9650;';
+    });
+    const activeTh = document.querySelector(`.maps-table thead th[data-sort="${column}"]`);
+    activeTh.classList.add(tableSortAsc ? 'sort-asc' : 'sort-desc');
+    activeTh.querySelector('.sort-arrow').innerHTML = tableSortAsc ? '&#9650;' : '&#9660;';
+
+    // Sort the rows
+    const rows = Array.from(mapsTableBody.querySelectorAll('tr'));
+    rows.sort((a, b) => {
+        let valA, valB;
+        if (column === 'name') {
+            valA = a.querySelector('.table-map-name').textContent.toLowerCase();
+            valB = b.querySelector('.table-map-name').textContent.toLowerCase();
+        } else {
+            valA = a.querySelector('.table-date').textContent;
+            valB = b.querySelector('.table-date').textContent;
+            // Parse dates for proper comparison
+            valA = new Date(valA).getTime();
+            valB = new Date(valB).getTime();
+        }
+        if (valA < valB) return tableSortAsc ? -1 : 1;
+        if (valA > valB) return tableSortAsc ? 1 : -1;
+        return 0;
+    });
+
+    rows.forEach(row => mapsTableBody.appendChild(row));
+}
+
+/**
+ * Render the table (list) view of maps
+ * @param {Array} maps - Array of map objects
+ */
+function renderMapTable(maps) {
+    mapsTableBody.innerHTML = '';
+
+    maps.forEach(mapData => {
+        const row = document.createElement('tr');
+        row.dataset.id = mapData.id;
+        row.dataset.note = mapData.note || '';
+
+        const updatedDate = new Date(mapData.updated_at).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+
+        row.innerHTML = `
+            <td class="table-map-name">${escapeHtml(mapData.name)}</td>
+            <td class="table-date">${updatedDate}</td>
+            <td>
+                <button class="btn-primary table-action-btn btn-note" data-id="${mapData.id}" data-note="${escapeHtml(mapData.note || '')}">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                    </svg>
+                </button>
+            </td>
+            <td>
+                <button class="btn-primary table-action-btn btn-copy-link" data-id="${mapData.id}">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+                    </svg>
+                </button>
+            </td>
+            <td>
+                <button class="btn-primary table-action-btn btn-copy" data-id="${mapData.id}" data-name="${escapeHtml(mapData.name)}">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
+                    </svg>
+                </button>
+            </td>
+            <td>
+                <button class="btn-danger table-action-btn btn-delete" data-id="${mapData.id}" data-name="${escapeHtml(mapData.name)}">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                    </svg>
+                </button>
+            </td>
+        `;
+
+        mapsTableBody.appendChild(row);
+    });
+
+    // Row click opens the map (but not button clicks)
+    mapsTableBody.querySelectorAll('tr').forEach(row => {
+        row.addEventListener('click', (e) => {
+            if (e.target.closest('.table-action-btn')) return;
+            handleOpenMap(row.dataset.id);
+        });
+    });
+
+    // Attach action button listeners
+    mapsTableBody.querySelectorAll('.btn-note').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            handleAddNote(btn.dataset.id, btn.dataset.note);
+        });
+    });
+
+    mapsTableBody.querySelectorAll('.btn-copy-link').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            handleCopyLink(btn.dataset.id);
+        });
+    });
+
+    mapsTableBody.querySelectorAll('.btn-copy').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            handleCopyMap(btn.dataset.id, btn.dataset.name);
+        });
+    });
+
+    mapsTableBody.querySelectorAll('.btn-delete').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
             handleDeleteMap(btn.dataset.id, btn.dataset.name);

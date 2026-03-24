@@ -69,7 +69,8 @@ function initializeMap(containerId, mapState = null) {
         rentPins: state.rentPins || [],
         landPins: state.landPins || [],
         currentCompType: state.currentCompType || 'subject', // Track which layer is active
-        countyBoundaries: state.countyBoundaries || DEFAULT_MAP_STATE.countyBoundaries
+        countyBoundaries: state.countyBoundaries || DEFAULT_MAP_STATE.countyBoundaries,
+        currentStyle: state.style || 'mapbox://styles/mapbox/streets-v12'
     };
 
     return map;
@@ -86,7 +87,7 @@ function getMapState(map) {
         zoom: map.getZoom(),
         bearing: map.getBearing(),
         pitch: map.getPitch(),
-        style: 'mapbox://styles/mapbox/streets-v12',
+        style: map.userData.currentStyle || 'mapbox://styles/mapbox/streets-v12',
         subjectPins: map.userData?.subjectPins || [],
         salePins: map.userData?.salePins || [],
         rentPins: map.userData?.rentPins || [],
@@ -536,13 +537,16 @@ async function updateCountyBoundaries(map, enabled, selectedCounties) {
                 });
             }
 
-            // Add outline layer (no fill, just black border)
+            // Add outline layer — white on satellite, black on streets
+            const lineColor = map.userData.currentStyle === 'mapbox://styles/mapbox/satellite-streets-v12'
+                ? '#ffffff'
+                : '#000000';
             map.addLayer({
                 id: 'county-boundaries-line',
                 type: 'line',
                 source: 'counties',
                 paint: {
-                    'line-color': '#000000',
+                    'line-color': lineColor,
                     'line-width': 2
                 }
             });
@@ -568,18 +572,12 @@ async function restoreCountyBoundaries(map, countyBoundaries) {
 }
 
 /**
- * Initialize the measurement tool GeoJSON sources, layers, and event handlers
+ * Add measurement tool GeoJSON sources and layers to the map.
+ * Called on initial load and after style changes (which wipe custom layers).
+ * Does NOT reset measurement state or attach event handlers.
  * @param {mapboxgl.Map} map - The map instance
  */
-function initializeMeasurementTool(map) {
-    map.userData.isMeasuring = false;
-    map.userData.measurePaused = false;
-    map.userData.measureGeojson = { type: 'FeatureCollection', features: [] };
-    map.userData.measureLinestring = {
-        type: 'Feature',
-        geometry: { type: 'LineString', coordinates: [] }
-    };
-
+function addMeasurementSourcesAndLayers(map) {
     map.addSource('measure-geojson', {
         type: 'geojson',
         data: map.userData.measureGeojson
@@ -670,6 +668,22 @@ function initializeMeasurementTool(map) {
             'text-halo-width': 2
         }
     });
+}
+
+/**
+ * Initialize the measurement tool GeoJSON sources, layers, and event handlers
+ * @param {mapboxgl.Map} map - The map instance
+ */
+function initializeMeasurementTool(map) {
+    map.userData.isMeasuring = false;
+    map.userData.measurePaused = false;
+    map.userData.measureGeojson = { type: 'FeatureCollection', features: [] };
+    map.userData.measureLinestring = {
+        type: 'Feature',
+        geometry: { type: 'LineString', coordinates: [] }
+    };
+
+    addMeasurementSourcesAndLayers(map);
 
     map.on('click', (e) => {
         if (!map.userData.isMeasuring) return;

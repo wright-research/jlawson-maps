@@ -17,6 +17,7 @@ const emptyState = document.getElementById('empty-state');
 const loadingEditor = document.getElementById('loading-editor');
 const mapNameInput = document.getElementById('map-name');
 const toggleCounties = document.getElementById('toggle-counties');
+const toggleBasemap = document.getElementById('toggle-basemap');
 const countySelect = document.getElementById('county-select');
 const countySelectContainer = document.getElementById('county-select-container');
 const compTypeRadioGroup = document.getElementById('comp-type-radio-group');
@@ -80,6 +81,9 @@ async function initializeApp() {
 
     // Populate county select dropdown
     populateCountySelect();
+
+    // Add basemap toggle event listener
+    toggleBasemap.addEventListener('change', handleBasemapToggle);
 
     // Add county controls event listeners
     toggleCounties.addEventListener('change', handleCountyToggle);
@@ -218,6 +222,35 @@ async function handleCountySelection() {
 }
 
 /**
+ * Handle basemap style toggle (streets <-> satellite)
+ */
+async function handleBasemapToggle(e) {
+    if (!map) return;
+
+    const isSatellite = e.target.checked;
+    const newStyle = isSatellite
+        ? 'mapbox://styles/mapbox/satellite-streets-v12'
+        : 'mapbox://styles/mapbox/streets-v12';
+
+    map.userData.currentStyle = newStyle;
+    map.setStyle(newStyle);
+
+    map.once('style.load', async () => {
+        // Re-add measurement sources/layers (style change wipes them)
+        addMeasurementSourcesAndLayers(map);
+        // Re-populate measurement display if points exist
+        if (typeof updateMeasureDisplay === 'function') updateMeasureDisplay(map);
+
+        // Re-add county boundaries if they were active
+        if (map.userData.countyBoundaries?.enabled && map.userData.countyBoundaries.selectedCounties.length > 0) {
+            await restoreCountyBoundaries(map, map.userData.countyBoundaries);
+        }
+    });
+
+    updateSaveButtonState();
+}
+
+/**
  * Get selected counties from the multiselect
  * @returns {Array<string>} Array of selected county names
  */
@@ -308,14 +341,21 @@ async function showListView(updateHistory = true) {
         updateUrl(null);
     }
 
-    // Reset to grid view and sort state
-    listViewMode = 'grid';
+    // Restore saved view mode preference, defaulting to grid
+    listViewMode = localStorage.getItem('listViewMode') || 'grid';
     tableSortColumn = null;
     tableSortAsc = true;
-    mapsList.classList.remove('hidden');
-    mapsTableContainer.classList.add('hidden');
-    document.getElementById('toggle-icon-grid').classList.add('hidden');
-    document.getElementById('toggle-icon-list').classList.remove('hidden');
+    if (listViewMode === 'table') {
+        mapsList.classList.add('hidden');
+        mapsTableContainer.classList.remove('hidden');
+        document.getElementById('toggle-icon-grid').classList.remove('hidden');
+        document.getElementById('toggle-icon-list').classList.add('hidden');
+    } else {
+        mapsList.classList.remove('hidden');
+        mapsTableContainer.classList.add('hidden');
+        document.getElementById('toggle-icon-grid').classList.add('hidden');
+        document.getElementById('toggle-icon-list').classList.remove('hidden');
+    }
     document.querySelectorAll('.maps-table thead th.sortable').forEach(th => {
         th.classList.remove('sort-asc', 'sort-desc');
         th.querySelector('.sort-arrow').innerHTML = '&#9650;';
@@ -383,6 +423,9 @@ function setupMapControls() {
     if (!map || !map.userData) return;
 
     const toggleContainer = document.getElementById('toggle-counties-container');
+
+    // Restore basemap toggle state
+    toggleBasemap.checked = map.userData.currentStyle === 'mapbox://styles/mapbox/satellite-streets-v12';
 
     // Setup county controls
     const boundaries = map.userData.countyBoundaries;
@@ -594,6 +637,8 @@ function handleToggleView() {
         gridIcon.classList.add('hidden');
         listIcon.classList.remove('hidden');
     }
+
+    localStorage.setItem('listViewMode', listViewMode);
 
     // Re-apply search filter
     handleSearch();
@@ -1379,7 +1424,8 @@ function getRelevantMapState(map) {
         rentPins: map.userData.rentPins || [],
         landPins: map.userData.landPins || [],
         currentCompType: map.userData.currentCompType || 'subject',
-        countyBoundaries: map.userData.countyBoundaries || { enabled: false, selectedCounties: [] }
+        countyBoundaries: map.userData.countyBoundaries || { enabled: false, selectedCounties: [] },
+        currentStyle: map.userData.currentStyle || 'mapbox://styles/mapbox/streets-v12'
     };
 }
 

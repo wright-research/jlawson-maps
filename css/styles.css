@@ -748,6 +748,11 @@ wa-radio:not(:defined) {
     margin-bottom: 0;
 }
 
+/* Separate basemap and county toggles */
+#toggle-counties-container {
+    margin-top: 12px;
+}
+
 /* Add margin to toggle container only when switch is on */
 #toggle-counties-container.switch-on {
     margin-bottom: 15px;

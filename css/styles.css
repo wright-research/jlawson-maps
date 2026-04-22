@@ -124,16 +124,19 @@ button:disabled {
 
 .map-card {
     background: white;
+    border: 1px solid transparent;
     border-radius: 8px;
     padding: 20px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    transition: all 0.2s ease;
+    transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
     cursor: pointer;
 }
 
 .map-card:hover {
-    background: #d8d9d9;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);
+    transform: translateY(-1px);
 }
 
 .map-card h3 {
@@ -151,48 +154,81 @@ button:disabled {
 }
 
 .map-card-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 4px;
+    margin-top: 4px;
 }
 
-.map-card-actions button {
-    padding: 8px;
-    font-size: 16px;
-    display: flex;
+.card-action-btn {
+    position: relative;
+    padding: 6px;
+    border-radius: 6px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: #9ca3af;
+    cursor: pointer;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    position: relative;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
-.map-card-actions button svg {
-    width: 16px;
-    height: 16px;
+.card-action-btn svg {
+    width: 18px;
+    height: 18px;
+    display: block;
 }
 
-.map-card-actions button .tooltip {
+.map-card:hover .card-action-btn {
+    color: #6b7280;
+}
+
+.card-action-btn.btn-copy-link:hover,
+.card-action-btn.btn-copy:hover,
+.card-action-btn.btn-note:hover {
+    background-color: #eff6ff;
+    color: #2563eb;
+    border-color: #bfdbfe;
+}
+
+.card-action-btn.btn-delete:hover {
+    background-color: #fef2f2;
+    color: #dc2626;
+    border-color: #fecaca;
+}
+
+.card-action-btn:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 1px;
+}
+
+.card-action-btn.btn-delete:focus-visible {
+    outline-color: #dc2626;
+}
+
+.card-action-btn .tooltip {
     position: absolute;
     bottom: 100%;
     left: 50%;
     transform: translateX(-50%);
+    margin-bottom: 6px;
     background-color: #1f2937;
     color: white;
-    padding: 6px 10px;
+    padding: 5px 8px;
     border-radius: 4px;
     font-size: 12px;
+    font-weight: 500;
     white-space: nowrap;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.2s ease;
-    margin-bottom: 5px;
+    transition: opacity 0.15s ease;
+    z-index: 1000;
 }
 
-.map-card-actions button:hover .tooltip {
+.card-action-btn:hover .tooltip,
+.card-action-btn:focus-visible .tooltip {
     opacity: 1;
-}
-
-.map-card-actions button:hover {
-    transform: translateY(-1px);
 }
 
 /* View Toggle Button */
@@ -230,6 +266,7 @@ button:disabled {
     pointer-events: none;
     transition: opacity 0.2s ease;
     margin-top: 5px;
+    z-index: 1000;
 }
 
 .btn-toggle-view:hover .tooltip {
@@ -298,7 +335,7 @@ button:disabled {
 }
 
 .maps-table tbody tr:hover {
-    background: #e5e7eb;
+    background: #eff6ff;
 }
 
 .maps-table tbody td {
@@ -323,18 +360,91 @@ button:disabled {
     white-space: nowrap;
 }
 
+.maps-table .table-actions-header {
+    text-align: right;
+    padding-right: 24px;
+}
+
+.maps-table .table-actions-cell {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.maps-table .table-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
 .maps-table .table-action-btn {
-    padding: 6px 10px;
-    font-size: 14px;
+    position: relative;
+    padding: 6px;
     border-radius: 6px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: #9ca3af;
+    cursor: pointer;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.maps-table .table-action-btn .tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 6px;
+    background-color: #1f2937;
+    color: white;
+    padding: 5px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+    z-index: 1000;
+}
+
+.maps-table .table-action-btn:hover .tooltip,
+.maps-table .table-action-btn:focus-visible .tooltip {
+    opacity: 1;
 }
 
 .maps-table .table-action-btn svg {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
+    display: block;
+}
+
+.maps-table tr:hover .table-action-btn {
+    color: #6b7280;
+}
+
+.maps-table .table-action-btn.btn-note:hover,
+.maps-table .table-action-btn.btn-copy-link:hover,
+.maps-table .table-action-btn.btn-copy:hover {
+    background-color: #eff6ff;
+    color: #2563eb;
+    border-color: #bfdbfe;
+}
+
+.maps-table .table-action-btn.btn-delete:hover {
+    background-color: #fef2f2;
+    color: #dc2626;
+    border-color: #fecaca;
+}
+
+.maps-table .table-action-btn:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 1px;
+}
+
+.maps-table .table-action-btn.btn-delete:focus-visible {
+    outline-color: #dc2626;
 }
 
 /* Empty State */

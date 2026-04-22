@@ -31,13 +31,13 @@ All scripts share the global scope. Functions in `map.js` are called by `app.js`
 ### State management
 
 - `map` (module-level in `app.js`) — the Mapbox GL JS instance; `null` when in list view
-- `map.userData` — all runtime app state lives on this object: pin arrays, `currentCompType`, `countyBoundaries`, measurement state (`isMeasuring`, `measurePaused`, `measureGeojson`, `measureLinestring`)
+- `map.userData` — all runtime app state lives on this object: pin arrays, `currentCompType`, `countyBoundaries`, `currentStyle` (active Mapbox style URL), measurement state (`isMeasuring`, `measurePaused`, `measureGeojson`, `measureLinestring`)
 - `mapMarkers` (module-level in `map.js`) — array of all Mapbox `Marker` instances currently on the map
 - `lastSavedState` / `lastSavedName` (in `app.js`) — JSON snapshots for dirty-checking (only pins + counties, not map position)
 
 ### Two views, one page
 
-- **List view** (`#list-view`): grid of saved map cards loaded from Supabase
+- **List view** (`#list-view`): saved maps displayed in either grid (cards) or table mode, toggled by `#btn-toggle-view`. Mode is persisted in `localStorage` as `listViewMode` (`'grid'` or `'table'`). Table mode supports sortable columns (name, date) and inline actions (note, copy link, clone, delete). Both modes share a `#map-search` filter.
 - **Editor view** (`#editor-view`): Mapbox map with pin placement, county boundaries, measure tool, geocoder
 
 `showListView()` tears down the map and resets all state. `showEditorView()` creates a fresh map. Both new-map and load-existing flows call `map.on('load', ...)` — any map-level initialization (layers, sources, event handlers) **must** go inside both `map.on('load')` callbacks.
@@ -49,6 +49,10 @@ Hash-based: `#map/{uuid}` deep-links to a saved map. `popstate` handler supports
 ### Pin system
 
 Four types with colors defined in `PIN_COLORS`: subject (red, max 1), sales (blue), rent (purple), land (green). Pins are stored as `subjectPins`, `salePins`, `rentPins`, `landPins` arrays on `map.userData` and serialized into `map_state` JSON in Supabase. `switchCompType()` shows/hides markers — subject pins are always visible.
+
+### Basemap / satellite toggle
+
+`#toggle-basemap` (`wa-switch`) in `#map-controls` switches the Mapbox style between `streets-v12` and `satellite-streets-v12`. The active style URL is stored in `map.userData.currentStyle` and serialized into `map_state` JSON so it is restored when a map is loaded. `showEditorView()` syncs the switch state to the restored style via `toggleBasemap.checked`.
 
 ### County boundaries
 
